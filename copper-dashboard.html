@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copper Buy Decision Tool — Kamp Stamping</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --copper: #b45309;
+    --copper-light: #fef3c7;
+    --copper-mid: #d97706;
+    --copper-dark: #78350f;
+    --green: #166534;
+    --green-bg: #dcfce7;
+    --amber: #92400e;
+    --amber-bg: #fef3c7;
+    --red: #991b1b;
+    --red-bg: #fee2e2;
+    --blue: #1e40af;
+    --blue-bg: #dbeafe;
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface2: #f5f5f4;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text2: #78716c;
+    --text3: #a8a29e;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--copper-dark);
+    color: white;
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .logo-icon {
+    width: 30px; height: 30px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .live-label {
+    font-size: 12px;
+    opacity: 0.7;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── Layout ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Page title ── */
+  .page-title {
+    margin-bottom: 1.75rem;
+  }
+  .page-title h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 3px;
+  }
+  .page-title p {
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 1rem;
+  }
+
+  /* ── Metrics grid ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    box-shadow: var(--shadow);
+  }
+  .metric-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .metric-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    font-family: 'DM Mono', monospace;
+  }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .metric.highlight {
+    background: var(--copper-dark);
+    border-color: var(--copper-dark);
+  }
+  .metric.highlight .metric-label,
+  .metric.highlight .metric-sub { color: rgba(255,255,255,0.6); }
+  .metric.highlight .metric-value { color: white; }
+
+  /* ── Recommendation ── */
+  .recommendation {
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    border-left: 4px solid;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .rec-icon {
+    font-size: 24px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .rec-content {}
+  .rec-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    letter-spacing: -0.01em;
+  }
+  .rec-body {
+    font-size: 13px;
+    line-height: 1.7;
+    opacity: 0.85;
+  }
+  .rec-buy { background: var(--green-bg); border-color: #16a34a; }
+  .rec-buy .rec-title { color: var(--green); }
+  .rec-wait { background: var(--amber-bg); border-color: #d97706; }
+  .rec-wait .rec-title { color: var(--amber); }
+  .rec-split { background: var(--blue-bg); border-color: #3b82f6; }
+  .rec-split .rec-title { color: var(--blue); }
+
+  /* ── Signals ── */
+  .signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+  .signal {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-family: 'DM Mono', monospace;
+  }
+  .sig-pos { background: var(--green-bg); color: var(--green); }
+  .sig-neg { background: var(--red-bg); color: var(--red); }
+  .sig-flat { background: var(--surface2); color: var(--text2); }
+  .sig-warn { background: var(--amber-bg); color: var(--amber); }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .tab {
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .tab:hover { background: var(--surface2); }
+  .tab.active {
+    background: var(--copper-dark);
+    color: white;
+    border-color: var(--copper-dark);
+  }
+
+  /* ── Chart ── */
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 230px;
+  }
+  .chart-note {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 8px;
+  }
+
+  /* ── Qty slider ── */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .slider-row label {
+    font-size: 13px;
+    color: var(--text2);
+    min-width: 200px;
+  }
+  .slider-row input[type=range] {
+    flex: 1;
+    min-width: 120px;
+    accent-color: var(--copper-dark);
+    cursor: pointer;
+  }
+  .slider-val {
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    color: var(--copper-dark);
+    min-width: 50px;
+  }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text3);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 99px;
+    font-family: 'DM Mono', monospace;
+  }
+  .b-green { background: var(--green-bg); color: var(--green); }
+  .b-red { background: var(--red-bg); color: var(--red); }
+  .b-blue { background: var(--blue-bg); color: var(--blue); }
+
+  /* ── How to use ── */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .how-item {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .how-num {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    color: var(--copper);
+    margin-bottom: 5px;
+  }
+  .how-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .how-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 11px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  /* ── Data freshness banner ── */
+  .data-banner {
+    background: var(--copper-light);
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--copper-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; }
+    main { padding: 1.25rem 1rem 3rem; }
+    .metric-value { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚙</div>
+    Kamp Stamping — Copper Tool
+  </div>
+  <div class="header-right">
+    <div class="live-dot"></div>
+    <span class="live-label">LME DATA</span>
+  </div>
+</header>
+
+<main>
+
+  <div class="page-title">
+    <h1>Copper Purchase Decision Dashboard</h1>
+    <p>Should you buy copper at today's spot price or opt for the monthly average? This tool tells you.</p>
+  </div>
+
+  <div class="data-banner">
+    <span>📅</span>
+    <span>Data sourced from LME (Westmetall) and RBI/market USD/INR rate. Last updated: <strong>22 April 2026</strong>. Refresh this page or revisit daily — update instructions in the footer.</span>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-grid" id="metrics-grid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Recommendation -->
+  <div id="recommendation" class="recommendation rec-buy">
+    <div class="rec-icon" id="rec-icon">✅</div>
+    <div class="rec-content">
+      <div class="rec-title" id="rec-title">Loading…</div>
+      <div class="rec-body" id="rec-body"></div>
+    </div>
+  </div>
+
+  <!-- Signals -->
+  <div class="signals" id="signals"></div>
+
+  <!-- Quantity slider -->
+  <div class="card">
+    <div class="card-title">Adjust your order quantity</div>
+    <div class="slider-row">
+      <label>Purchase quantity (tonnes)</label>
+      <input type="range" id="qty" min="1" max="5" step="0.5" value="2.5">
+      <span class="slider-val" id="qty-val">2.5 T</span>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;" id="cost-summary"></div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card">
+    <div class="card-title">Price analysis</div>
+    <div class="tabs">
+      <button class="tab active" onclick="setView('history',this)">Actual 30-day prices</button>
+      <button class="tab" onclick="setView('sim',this)">Simulated paths (next 30d)</button>
+      <button class="tab" onclick="setView('dist',this)">Probability distribution</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="mainChart" role="img" aria-label="Copper price chart">Copper price data</canvas>
+    </div>
+    <div class="chart-note" id="chart-note">Source: Westmetall/LME. Prices in ₹/kg.</div>
+  </div>
+
+  <!-- Scenario table -->
+  <div class="card">
+    <div class="card-title">Scenario analysis — what if prices move?</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>End price (₹/kg)</th>
+            <th>Best action</th>
+            <th>Order cost</th>
+            <th>vs monthly avg option</th>
+          </tr>
+        </thead>
+        <tbody id="scenario-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- How to use -->
+  <div class="card">
+    <div class="card-title">How to use this tool</div>
+    <div class="how-grid">
+      <div class="how-item">
+        <div class="how-num">STEP 01</div>
+        <div class="how-title">Check the recommendation</div>
+        <div class="how-desc">The green/amber box at the top gives today's buy vs. wait verdict, auto-calculated from live LME prices.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">STEP 02</div>
+        <div class="how-title">Adjust quantity</div>
+        <div class="how-desc">Use the slider to set how many tonnes you plan to buy this cycle. Cost projections update instantly.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">STEP 03</div>
+        <div class="how-title">Check the signals</div>
+        <div class="how-desc">Trend, volatility, and breakeven signals tell you the strength of the recommendation.</div>
+      </div>
+      <div class="how-item">
+        <div class="how-num">STEP 04</div>
+        <div class="how-title">Review scenarios</div>
+        <div class="how-desc">The scenario table shows your cost under different price moves — bull run to sharp drop.</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Kamp Stamping Internal Tool &nbsp;·&nbsp; LME Copper Cash Settlement (USD/t) via Westmetall &nbsp;·&nbsp; USD/INR via RBI market rate &nbsp;·&nbsp;
+  <strong>To update daily prices:</strong> open the HTML file, find the section marked <code>PRICE DATA — UPDATE DAILY</code> and replace the numbers. Or contact your IT team to automate this.
+  &nbsp;·&nbsp; Built April 2026
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   PRICE DATA — UPDATE DAILY
+   Source: https://www.westmetall.com/en/markdaten.php?action=table&field=LME_Cu_cash
+   Replace the prices below with latest LME Cash Settlement (USD/tonne)
+   Most recent date first. Keep at least 21 entries for the monthly avg.
+   Also update USD_INR to today's USD/INR rate.
+   ══════════════════════════════════════════════════════ */
+
+const USD_INR = 93.5;  // ← UPDATE THIS DAILY (USD to INR rate)
+const DATA_DATE = '22 April 2026'; // ← UPDATE THIS
+
+const RAW = [
+  // { date: 'DD Mon', usd: PRICE }   ← most recent first
+  { date: '21 Apr', usd: 13200.50 },
+  { date: '20 Apr', usd: 13163.00 },
+  { date: '17 Apr', usd: 13149.00 },
+  { date: '16 Apr', usd: 13180.00 },
+  { date: '15 Apr', usd: 13155.00 },
+  { date: '14 Apr', usd: 13095.00 },
+  { date: '13 Apr', usd: 12820.50 },
+  { date: '10 Apr', usd: 12660.50 },
+  { date: '09 Apr', usd: 12455.00 },
+  { date: '08 Apr', usd: 12552.00 },
+  { date: '07 Apr', usd: 12252.00 },
+  { date: '02 Apr', usd: 12147.00 },
+  { date: '01 Apr', usd: 12270.00 },
+  { date: '31 Mar', usd: 12160.00 },
+  { date: '30 Mar', usd: 12137.00 },
+  { date: '27 Mar', usd: 12046.00 },
+  { date: '26 Mar', usd: 12108.00 },
+  { date: '25 Mar', usd: 12135.00 },
+  { date: '24 Mar', usd: 11878.50 },
+  { date: '23 Mar', usd: 11891.00 },
+  { date: '21 Mar', usd: 12021.50 }, // start of this billing window (21st prev month)
+];
+
+/* ══════════════════════════════════════════════════════
+   END OF DATA SECTION — no need to edit below
+   ══════════════════════════════════════════════════════ */
+
+// Derived values
+const toINR = usd => +(usd * USD_INR / 1000).toFixed(1); // USD/tonne → INR/kg
+
+const spotUSD = RAW[0].usd;
+const spotINR = toINR(spotUSD);
+
+// Monthly avg: index 1 onwards (exclude today's spot, include up to Apr 20 / 20th of month)
+const avgWindow = RAW.slice(1);
+const monthlyAvgUSD = avgWindow.reduce((s,d) => s + d.usd, 0) / avgWindow.length;
+const monthlyAvgINR = +toINR(monthlyAvgUSD).toFixed(1);
+
+// Chronological arrays for charting
+const chrono = [...RAW].reverse();
+const labels = chrono.map(d => d.date);
+const pricesINR = chrono.map(d => toINR(d.usd));
+
+// Trend (% change oldest→newest in window)
+const trendPct = +((pricesINR[pricesINR.length-1] - pricesINR[0]) / pricesINR[0] * 100).toFixed(1);
+const trendDaily = trendPct / pricesINR.length;
+
+// Volatility (std dev of daily returns)
+const returns = [];
+for (let i = 1; i < pricesINR.length; i++) returns.push((pricesINR[i]-pricesINR[i-1])/pricesINR[i-1]);
+const meanR = returns.reduce((s,v)=>s+v,0)/returns.length;
+const volDaily = Math.sqrt(returns.reduce((s,v)=>s+(v-meanR)**2,0)/returns.length);
+const volMonthlyPct = +(volDaily * Math.sqrt(21) * 100).toFixed(1);
+
+// State
+let chartInst = null;
+let currentView = 'history';
+
+// Formatters
+function lakh(v) { return '₹' + (Math.abs(v)/100000).toFixed(2) + 'L'; }
+function orderCost(pricePerKg, tonnes) { return pricePerKg * tonnes * 1000; }
+function getQty() { return +document.getElementById('qty').value; }
+
+function render() {
+  const qty = getQty();
+  document.getElementById('qty-val').textContent = qty + ' T';
+
+  const spotCost = orderCost(spotINR, qty);
+  const avgCost = orderCost(monthlyAvgINR, qty);
+  const savings = avgCost - spotCost; // positive = spot is cheaper
+  const breakevenPct = +((monthlyAvgINR - spotINR) / spotINR * 100).toFixed(1);
+
+  // Metrics
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric highlight">
+      <div class="metric-label">LME spot today</div>
+      <div class="metric-value">₹${spotINR}/kg</div>
+      <div class="metric-sub">$${spotUSD.toLocaleString()}/t · ${DATA_DATE}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Monthly avg (21 Mar–20 Apr)</div>
+      <div class="metric-value">₹${monthlyAvgINR}/kg</div>
+      <div class="metric-sub">$${Math.round(monthlyAvgUSD).toLocaleString()}/t · ${avgWindow.length} trading days</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">30-day trend</div>
+      <div class="metric-value" style="color:${trendPct>0?'#b45309':'#166534'}">${trendPct>0?'+':''}${trendPct}%</div>
+      <div class="metric-sub">${trendPct>3?'Rising ↑':trendPct<-3?'Falling ↓':'Flat →'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Volatility (monthly)</div>
+      <div class="metric-value">${volMonthlyPct}%</div>
+      <div class="metric-sub">${volMonthlyPct>8?'High — be cautious':volMonthlyPct>4?'Moderate':'Low'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Order cost at spot (${qty}T)</div>
+      <div class="metric-value">${lakh(spotCost)}</div>
+      <div class="metric-sub">₹${spotINR}/kg × ${qty*1000} kg</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Saving vs monthly avg</div>
+      <div class="metric-value" style="color:${savings>0?'#166534':'#991b1b'}">${savings>=0?'+':'-'}${lakh(savings)}</div>
+      <div class="metric-sub">${savings>0?'buying at spot saves this':'avg option is cheaper'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Breakeven movement</div>
+      <div class="metric-value">${breakevenPct}%</div>
+      <div class="metric-sub">spot can rise this much before avg wins</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">USD/INR rate</div>
+      <div class="metric-value">${USD_INR}</div>
+      <div class="metric-sub">used for all conversions</div>
+    </div>
+  `;
+
+  // Recommendation
+  const spotBelow = spotINR < monthlyAvgINR;
+  const rising = trendPct > 5;
+  const falling = trendPct < -3;
+  const highVol = volMonthlyPct > 8;
+  const rec = document.getElementById('recommendation');
+  const recTitle = document.getElementById('rec-title');
+  const recBody = document.getElementById('rec-body');
+  const recIcon = document.getElementById('rec-icon');
+  rec.className = 'recommendation';
+
+  if (spotBelow && rising) {
+    rec.classList.add('rec-buy'); recIcon.textContent = '✅';
+    recTitle.textContent = 'Buy at spot now — prices are rising fast';
+    recBody.textContent = `Spot (₹${spotINR}/kg) is ₹${(monthlyAvgINR-spotINR).toFixed(1)}/kg below the monthly average AND the 30-day trend is strongly upward (+${trendPct}%). Delaying risks the monthly average catching up or spot climbing further. Buying today saves approximately ${lakh(savings)} on a ${qty}-tonne order. Recommended: act within 1–2 days.`;
+  } else if (spotBelow && !rising) {
+    rec.classList.add('rec-buy'); recIcon.textContent = '✅';
+    recTitle.textContent = 'Buy at spot — spot is below the monthly average';
+    recBody.textContent = `Spot (₹${spotINR}/kg) is currently cheaper than the billing window average of ₹${monthlyAvgINR}/kg. Buying today saves approximately ${lakh(savings)} vs. the monthly average option for a ${qty}-tonne order. Trend is moderate — no strong pressure to urgently delay. Breakeven: spot can rise up to ${breakevenPct}% before the monthly average becomes the better deal.`;
+  } else if (!spotBelow && falling) {
+    rec.classList.add('rec-wait'); recIcon.textContent = '⏳';
+    recTitle.textContent = 'Wait — prices are trending down';
+    recBody.textContent = `Spot (₹${spotINR}/kg) is above the current monthly average (₹${monthlyAvgINR}/kg), and the 30-day trend is downward (${trendPct}%). Waiting a few more days may bring both spot and the running average down. Consider monitoring for 5–7 days before committing. If you must buy now, the monthly average pricing option is currently the safer choice.`;
+  } else if (!spotBelow && highVol) {
+    rec.classList.add('rec-split'); recIcon.textContent = '⚖️';
+    recTitle.textContent = 'Split your purchase — high volatility, spot above average';
+    recBody.textContent = `Spot (₹${spotINR}/kg) is above the monthly average (₹${monthlyAvgINR}/kg) with elevated market volatility (${volMonthlyPct}%). Rather than committing all at once, consider buying ~${Math.round(qty/2*2)/2}T now at spot and the remainder in 10–12 days. This averages your exposure and protects against a sharp move in either direction.`;
+  } else if (!spotBelow) {
+    rec.classList.add('rec-wait'); recIcon.textContent = '⏳';
+    recTitle.textContent = 'Monthly average option may be cheaper';
+    recBody.textContent = `Spot (₹${spotINR}/kg) is ₹${(spotINR-monthlyAvgINR).toFixed(1)}/kg above the current monthly average (₹${monthlyAvgINR}/kg). If your supplier allows the monthly average pricing option, that would save approximately ${lakh(-savings)} on this ${qty}-tonne order. No strong upward trend visible — the wait looks low-risk.`;
+  }
+
+  // Signals
+  const sigs = [
+    { t: `Spot ${spotBelow?'below':'above'} avg by ₹${Math.abs(spotINR-monthlyAvgINR).toFixed(1)}/kg`, c: spotBelow?'sig-pos':'sig-neg' },
+    { t: `Trend: ${trendPct>0?'+':''}${trendPct}% (30d)`, c: trendPct>5?'sig-warn':trendPct<-3?'sig-pos':'sig-flat' },
+    { t: `Volatility: ${volMonthlyPct}% monthly`, c: highVol?'sig-neg':'sig-flat' },
+    { t: `Breakeven: +${breakevenPct}%`, c: breakevenPct>5?'sig-pos':breakevenPct<1?'sig-neg':'sig-flat' },
+    { t: `USD/INR: ${USD_INR}`, c: 'sig-flat' },
+  ];
+  document.getElementById('signals').innerHTML = sigs.map(s=>`<span class="signal ${s.c}">${s.t}</span>`).join('');
+
+  // Cost summary
+  document.getElementById('cost-summary').innerHTML = `
+    <div style="font-size:13px;color:var(--text2)">At spot: <strong style="color:var(--text);font-family:'DM Mono',monospace">${lakh(spotCost)}</strong></div>
+    <div style="font-size:13px;color:var(--text2)">At monthly avg: <strong style="color:var(--text);font-family:'DM Mono',monospace">${lakh(avgCost)}</strong></div>
+    <div style="font-size:13px;color:var(--text2)">Difference: <strong style="color:${savings>0?'#166534':'#991b1b'};font-family:'DM Mono',monospace">${savings>=0?'save ':'pay more '} ${lakh(Math.abs(savings))}</strong></div>
+  `;
+
+  // Scenarios
+  const scenarios = [
+    {name:'Bull run',emoji:'🚀',mult:1.08},
+    {name:'Mild rise',emoji:'📈',mult:1.03},
+    {name:'Flat',emoji:'➡️',mult:1.00},
+    {name:'Mild fall',emoji:'📉',mult:0.97},
+    {name:'Sharp drop',emoji:'⬇️',mult:0.92},
+  ];
+  document.getElementById('scenario-body').innerHTML = scenarios.map(s => {
+    const ep = +(spotINR * s.mult).toFixed(1);
+    const pathAvg = +((spotINR + ep)/2).toFixed(1);
+    const best = ep > monthlyAvgINR ? 'Buy at spot (now)' : 'Wait for monthly avg';
+    const cost = Math.round(pathAvg * qty * 1000);
+    const diff = cost - avgCost;
+    const badge = diff < 0 ? `<span class="badge b-green">Save ${lakh(Math.abs(diff))}</span>` : `<span class="badge b-red">+${lakh(diff)}</span>`;
+    const actionBadge = ep > monthlyAvgINR ? `<span class="badge b-blue">Spot</span>` : `<span class="badge b-green">Monthly avg</span>`;
+    return `<tr><td>${s.emoji} ${s.name}</td><td style="font-family:'DM Mono',monospace">₹${ep}</td><td>${actionBadge}</td><td style="font-family:'DM Mono',monospace">${lakh(cost)}</td><td>${badge}</td></tr>`;
+  }).join('');
+
+  drawChart();
+}
+
+function simulatePaths(spot, trendD, volD, days, n) {
+  return Array.from({length:n}, () => {
+    let p = spot, path = [p];
+    for (let d = 0; d < days; d++) {
+      const shock = (Math.random()+Math.random()+Math.random()-1.5)/1.5;
+      p = +(p * (1 + trendD/100 + volD * shock)).toFixed(1);
+      path.push(p);
+    }
+    return path;
+  });
+}
+
+function setView(v, btn) {
+  currentView = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  drawChart();
+}
+
+function drawChart() {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  const chartDefaults = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { autoSkip: true, maxTicksLimit: 8, font:{size:11}, color:'#a8a29e' }, grid:{display:false} },
+      y: { ticks: { font:{size:11}, color:'#a8a29e', callback: v=>'₹'+v }, grid:{color:'rgba(0,0,0,0.04)'} }
+    }
+  };
+
+  if (currentView === 'history') {
+    document.getElementById('chart-note').textContent = 'Source: Westmetall / LME Cash Settlement. Prices converted to ₹/kg. Red dashed = current billing-window average.';
+    chartInst = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label:'Spot (₹/kg)', data:pricesINR, borderColor:'#b45309', borderWidth:2.5, pointRadius:3, pointBackgroundColor:'#b45309', tension:0.35, fill:false },
+        { label:'Monthly avg', data:Array(pricesINR.length).fill(monthlyAvgINR), borderColor:'#ef4444', borderWidth:1.5, borderDash:[6,3], pointRadius:0 }
+      ]},
+      options: chartDefaults
+    });
+  } else if (currentView === 'sim') {
+    document.getElementById('chart-note').textContent = 'Monte Carlo simulation — 12 paths over next 30 days based on measured trend & volatility. Red dashed = current monthly average.';
+    const futureLabels = ['Today',...Array.from({length:30},(_,i)=>'D'+(i+1))];
+    const paths = simulatePaths(spotINR, trendDaily, volDaily, 30, 12);
+    const cols = ['#b45309','#0891b2','#7c3aed','#16a34a','#dc2626','#d97706','#2563eb','#9333ea','#db2777','#059669','#b45309','#0891b2'];
+    const datasets = paths.map((p,i)=>({ label:'P'+(i+1), data:p, borderColor:cols[i]+'60', borderWidth:1.5, pointRadius:0, tension:0.3 }));
+    datasets.push({ label:'Monthly avg', data:Array(31).fill(monthlyAvgINR), borderColor:'#ef4444', borderWidth:1.5, borderDash:[6,3], pointRadius:0 });
+    chartInst = new Chart(ctx, { type:'line', data:{labels:futureLabels,datasets}, options:chartDefaults });
+  } else {
+    document.getElementById('chart-note').textContent = 'Distribution of 500 simulated end-of-month prices. Green bars = below monthly avg (spot wins). Red bars = above monthly avg (wait wins).';
+    const paths = simulatePaths(spotINR, trendDaily, volDaily, 30, 500);
+    const ends = paths.map(p=>p[p.length-1]);
+    const mn=Math.min(...ends), mx=Math.max(...ends), bins=20, step=(mx-mn)/bins;
+    const counts=Array(bins).fill(0);
+    ends.forEach(e=>{ const b=Math.min(Math.floor((e-mn)/step),bins-1); counts[b]++; });
+    const blabels=counts.map((_,i)=>Math.round(mn+i*step));
+    chartInst = new Chart(ctx, {
+      type:'bar',
+      data:{labels:blabels,datasets:[{label:'Count',data:counts,backgroundColor:blabels.map(l=>l<=monthlyAvgINR?'#16a34a88':'#dc262688'),borderWidth:0}]},
+      options:{ ...chartDefaults, scales:{ ...chartDefaults.scales, x:{ticks:{font:{size:10},color:'#a8a29e',callback:(_,i)=>'₹'+blabels[i]},grid:{display:false}}} }
+    });
+  }
+}
+
+document.getElementById('qty').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>
