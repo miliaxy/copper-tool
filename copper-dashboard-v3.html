@@ -60,19 +60,19 @@ main { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 4rem; }
 .card-title { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); margin-bottom:1rem; display:flex; align-items:center; }
 
 /* Metrics */
-.metrics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:1rem; align-items:start; }
+.metrics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:1rem; align-items:stretch; }
 .metric { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.1rem; box-shadow:var(--shadow); }
 .metric.highlight { background:linear-gradient(135deg,#1c2b3a,#2e4057); border-color:#4a7fa5; border-width:1.5px; }
 .metric.highlight .metric-label,.metric.highlight .metric-sub { color:rgba(255,255,255,0.6); }
 .metric.highlight .metric-value { color:white; }
-.metric-label { font-size:11px; color:var(--text3); font-weight:500; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; display:flex; align-items:center; flex-wrap:wrap; }
+.metric-label { font-size:11px; color:var(--text3); font-weight:500; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; display:flex; align-items:center; flex-wrap:nowrap; }
 .metric-value { font-size:20px; font-weight:600; letter-spacing:-0.02em; line-height:1.1; font-family:'DM Mono',monospace; }
 .metric-sub { font-size:11px; color:var(--text3); margin-top:4px; }
 .section-label { grid-column:1/-1; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); padding-bottom:4px; border-bottom:1px solid var(--border); }
 .section-label.second { margin-top:8px; }
 
 /* Tooltip */
-.info-icon { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:50%; background:var(--accent); color:white; font-size:9px; font-weight:700; cursor:pointer; margin-left:5px; position:relative; font-style:normal; flex-shrink:0; }
+.info-icon { display:inline-flex; align-items:center; justify-content:center; width:12px; height:12px; border-radius:50%; background:var(--accent); color:white; font-size:8px; font-weight:400; cursor:pointer; margin-left:5px; position:relative; font-style:italic; flex-shrink:0; text-transform:none; letter-spacing:0; }
 .info-icon .tooltip { visibility:hidden; opacity:0; position:absolute; bottom:22px; left:50%; transform:translateX(-50%); background:#1c2b3a; color:white; font-size:11px; font-weight:400; line-height:1.5; padding:8px 12px; border-radius:8px; width:230px; text-align:left; pointer-events:none; transition:opacity 0.2s; z-index:100; font-family:'DM Sans',sans-serif; box-shadow:0 4px 12px rgba(0,0,0,0.3); text-transform:none; letter-spacing:0; }
 .info-icon .tooltip::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#1c2b3a; }
 .info-icon:hover .tooltip { visibility:visible; opacity:1; }
@@ -90,12 +90,11 @@ main { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 4rem; }
 .rec-split .rec-title { color:var(--blue); }
 
 /* Slider */
-.slider-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-.slider-row label { font-size:13px; color:var(--text2); min-width:200px; }
+.order-header { margin:4px 0 10px; }
+.order-header-label { display:block; width:100%; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); padding-bottom:4px; border-bottom:1px solid var(--border); }
+.slider-row { display:flex; align-items:center; gap:12px; flex:1; flex-wrap:wrap; }
 .slider-row input[type=range] { flex:1; min-width:120px; accent-color:var(--accent); cursor:pointer; }
-.slider-val { font-size:14px; font-weight:600; font-family:'DM Mono',monospace; color:var(--mid); min-width:50px; }
-.cost-summary { margin-top:10px; display:flex; gap:20px; flex-wrap:wrap; }
-.cost-summary div { font-size:13px; color:var(--text2); }
+.slider-val { font-size:13px; font-weight:600; font-family:'DM Mono',monospace; color:var(--mid); min-width:40px; }
 
 /* Tabs */
 .tabs { display:flex; gap:6px; margin-bottom:1rem; flex-wrap:wrap; }
@@ -155,19 +154,23 @@ footer { text-align:center; padding:1.5rem; font-size:11px; color:var(--text3); 
 
   <div id="main-content" style="display:none;">
 
-    <!-- Row 1 & 2: Metrics -->
-    <div class="metrics-grid" id="metrics-grid"></div>
+    <!-- Row 1: Market inputs -->
+    <div class="metrics-grid" id="metrics-market"></div>
+
+    <!-- Row 2: Your order header -->
+    <div class="order-header">
+      <span class="order-header-label" id="order-label">Your order</span>
+    </div>
 
     <!-- Row 3: Slider -->
-    <div class="card">
-      <div class="card-title">Adjust your order quantity</div>
-      <div class="slider-row">
-        <label>Purchase quantity (tonnes)</label>
-        <input type="range" id="qty" min="1" max="5" step="0.5" value="2.5">
-        <span class="slider-val" id="qty-val">2.5 T</span>
-      </div>
-      <div class="cost-summary" id="cost-summary"></div>
+    <div class="slider-row" style="margin-bottom:10px;">
+      <span style="font-size:12px;color:var(--text2);white-space:nowrap;">Purchase quantity (tonnes)</span>
+      <input type="range" id="qty" min="1" max="5" step="0.5" value="2.5">
+      <span class="slider-val" id="qty-val">2.5 T</span>
     </div>
+
+    <!-- Row 4: Your order metrics -->
+    <div class="metrics-grid" id="metrics-order"></div>
 
     <!-- Row 4: Recommendation -->
     <div id="recommendation" class="recommendation rec-buy">
@@ -341,8 +344,8 @@ function render() {
   const breakevenPct = +((s.monthlyAvgINR - s.spotINR)/s.spotINR*100).toFixed(1);
   const fmtWin       = d => d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
 
-  // ── Metrics grid ──
-  document.getElementById('metrics-grid').innerHTML = `
+  // ── Market inputs grid ──
+  document.getElementById('metrics-market').innerHTML = `
     <div class="section-label">Market inputs</div>
 
     <div class="metric highlight">
@@ -354,10 +357,8 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label" style="flex-direction:column;align-items:flex-start;">
-        Monthly avg
-        <i class="info-icon" style="margin-left:0;margin-top:3px;">i<span class="tooltip">Average LME copper price from the 21st of last month to the 20th of this month — the window your supplier uses to calculate the monthly average price option.</span></i>
-        <i style="font-style:italic;font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">21st last month – 20th this month</i>
+      <div class="metric-label">Monthly avg
+        <i class="info-icon">i<span class="tooltip">Average LME copper price from the 21st of last month to the 20th of this month — the window your supplier uses to calculate the monthly average price option.</span></i>
       </div>
       <div class="metric-value">₹${s.monthlyAvgINR}/kg</div>
       <div class="metric-sub">${fmtWin(s.winStart)} – ${fmtWin(s.winEnd)} · ${s.avgWindowSize} days</div>
@@ -382,41 +383,52 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label">USD / INR</div>
+      <div class="metric-label">USD / INR
+        <i class="info-icon">i<span class="tooltip">Live USD/INR exchange rate sourced from Google Finance. Used to convert the copper price from USD to ₹/kg.</span></i>
+      </div>
       <div class="metric-value">${s.usdInr.toFixed(1)}</div>
-      <div class="metric-sub">live from Google Finance</div>
-    </div>
-
-    <div class="section-label second">Your order (${qty} tonnes)</div>
-
-    <div class="metric">
-      <div class="metric-label">Order cost at yesterday's price</div>
-      <div class="metric-value">${lakh(spotCost)}</div>
-      <div class="metric-sub">₹${s.spotINR}/kg × ${qty*1000} kg</div>
-    </div>
-
-    <div class="metric">
-      <div class="metric-label">Saving vs monthly avg</div>
-      <div class="metric-value" style="color:${savings>0?'#166534':'#991b1b'}">
-        ${savings>=0?'+':'-'}${lakh(Math.abs(savings))}
-      </div>
-      <div class="metric-sub">${savings>0?'yesterday price is cheaper':'monthly avg is cheaper'}</div>
-    </div>
-
-    <div class="metric">
-      <div class="metric-label">Breakeven movement
-        <i class="info-icon">i<span class="tooltip">How much yesterday's price can rise before the monthly average option becomes the cheaper choice.</span></i>
-      </div>
-      <div class="metric-value">${breakevenPct}%</div>
-      <div class="metric-sub">price can rise this much before avg wins</div>
+      <div class="metric-sub">&nbsp;</div>
     </div>
   `;
 
-  // ── Cost summary under slider ──
-  document.getElementById('cost-summary').innerHTML = `
-    <div>At yesterday's price: <strong style="font-family:'DM Mono',monospace;">${lakh(spotCost)}</strong></div>
-    <div>At monthly avg: <strong style="font-family:'DM Mono',monospace;">${lakh(avgCost)}</strong></div>
-    <div>Difference: <strong style="color:${savings>0?'#166534':'#991b1b'};font-family:'DM Mono',monospace;">${savings>=0?'save ':'pay more '}${lakh(Math.abs(savings))}</strong></div>
+  // ── Your order label ──
+  document.getElementById('order-label').textContent = 'Your order';
+
+  // ── Your order grid ──
+  document.getElementById('metrics-order').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">At yesterday's price
+        <i class="info-icon">i<span class="tooltip">What you'd pay if you buy today at yesterday's closing price of ₹${s.spotINR}/kg × ${qty*1000} kg.</span></i>
+      </div>
+      <div class="metric-value">${lakh(spotCost)}</div>
+      <div class="metric-sub">&nbsp;</div>
+    </div>
+
+    <div class="metric">
+      <div class="metric-label">At monthly avg
+        <i class="info-icon">i<span class="tooltip">What you'd pay using the monthly average price of ₹${s.monthlyAvgINR}/kg × ${qty*1000} kg.</span></i>
+      </div>
+      <div class="metric-value">${lakh(avgCost)}</div>
+      <div class="metric-sub">&nbsp;</div>
+    </div>
+
+    <div class="metric">
+      <div class="metric-label">Difference
+        <i class="info-icon">i<span class="tooltip">Monthly average cost minus yesterday's price cost. Green = there is a cheaper option available.</span></i>
+      </div>
+      <div class="metric-value" style="color:#166534">
+        ${lakh(Math.abs(savings))}
+      </div>
+      <div class="metric-sub">${savings>0?'buy at yesterday\'s price':'buy at monthly avg'}</div>
+    </div>
+
+    <div class="metric">
+      <div class="metric-label">Breakeven
+        <i class="info-icon">i<span class="tooltip">How much yesterday's price can rise before the monthly average becomes the cheaper choice.</span></i>
+      </div>
+      <div class="metric-value">${breakevenPct}%</div>
+      <div class="metric-sub">&nbsp;</div>
+    </div>
   `;
 
   // ── Recommendation ──
