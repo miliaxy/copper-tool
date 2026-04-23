@@ -435,21 +435,21 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label">Difference
-        <i class="info-icon">i<span class="tooltip">Monthly average cost minus yesterday's price cost. Green = there is a cheaper option available.</span></i>
+      <div class="metric-label">Recommended
+        <i class="info-icon">i<span class="tooltip">The cheaper option for this order based on current prices. Savings shown are for your selected quantity.</span></i>
       </div>
-      <div class="metric-value" style="color:#166534">
-        ${lakh(Math.abs(savings))}
+      <div class="metric-value" style="color:#166534;font-size:15px;line-height:1.3;">
+        ${savings>0?'Yesterday\'s price':'Monthly avg'}
       </div>
-      <div class="metric-sub">${savings>0?'buy at yesterday\'s price':'buy at monthly avg'}</div>
+      <div class="metric-sub">Save ${lakh(Math.abs(savings))} on this order</div>
     </div>
 
     <div class="metric">
       <div class="metric-label">Breakeven
-        <i class="info-icon">i<span class="tooltip">How much yesterday's price can rise before the monthly average becomes the cheaper choice.</span></i>
+        <i class="info-icon">i<span class="tooltip">How much yesterday's price needs to move before the recommended option changes. Shows the absolute ₹/kg gap and the % move required.</span></i>
       </div>
-      <div class="metric-value">${breakevenPct}%</div>
-      <div class="metric-sub">&nbsp;</div>
+      <div class="metric-value">₹${Math.abs(s.activeAvgINR - s.spotINR).toFixed(1)}/kg</div>
+      <div class="metric-sub">${Math.abs(breakevenPct)}% move flips the recommendation</div>
     </div>
   `;
 
