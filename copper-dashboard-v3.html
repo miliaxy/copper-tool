@@ -172,7 +172,10 @@ footer { text-align:center; padding:1.5rem; font-size:11px; color:var(--text3); 
     <!-- Row 4: Your order metrics -->
     <div class="metrics-grid" id="metrics-order"></div>
 
-    <!-- Row 4: Recommendation -->
+    <!-- Row 4: Forecast -->
+    <div class="order-header" style="margin-top:4px;">
+      <span class="order-header-label">Forecast <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;opacity:0.7;">— based on 500 simulated price paths</span></span>
+    </div>
     <div id="recommendation" class="recommendation rec-buy">
       <div class="rec-icon" id="rec-icon">✅</div>
       <div class="rec-content">
@@ -346,6 +349,38 @@ function deriveState(raw) {
            volMonthlyPct, histINR, histLabels };
 }
 
+// ── Simulation-based forecast ─────────────────────────
+function forecastRec(s) {
+  if (!s.hasCurPeriod) return { simBased: false };
+
+  const today      = new Date();
+  const periodEnd  = new Date(today.getFullYear(), today.getMonth()+1, 20);
+  const daysLeft   = Math.max(1, Math.round((periodEnd - today) / 86400000));
+
+  // Current period sum from known avg × days
+  const curSum   = (s.curAvgINR || s.spotINR) * s.curWindowSize;
+  const curCount = s.curWindowSize;
+
+  const N = 500;
+  let monthlyWins = 0;
+
+  for (let i = 0; i < N; i++) {
+    let p = s.spotINR, sum = curSum, count = curCount;
+    for (let d = 0; d < daysLeft; d++) {
+      const shock = (Math.random()+Math.random()+Math.random()-1.5)/1.5;
+      p = p * (1 + s.trendDaily/100 + s.volDaily*shock);
+      sum += p; count++;
+    }
+    if ((sum/count) < s.spotINR) monthlyWins++;
+  }
+
+  const pctMonthly = Math.round(monthlyWins / N * 100);
+  const pctBuyNow  = 100 - pctMonthly;
+  const confidence = pctMonthly >= 70 || pctBuyNow >= 70 ? 'Strong' : pctMonthly >= 57 || pctBuyNow >= 57 ? 'Moderate' : 'Close call';
+
+  return { simBased: true, daysLeft, pctMonthly, pctBuyNow, confidence, monthlyFavoured: pctMonthly > pctBuyNow };
+}
+
 // ── Render ────────────────────────────────────────────
 function render() {
   const s   = STATE;
@@ -453,39 +488,36 @@ function render() {
     </div>
   `;
 
-  // ── Recommendation ──
-  const spotBelow = s.spotINR < s.monthlyAvgINR;
-  const rising    = s.trendPct > 5;
-  const falling   = s.trendPct < -3;
-  const highVol   = s.volMonthlyPct > 8;
+  // ── Recommendation (simulation-based) ──
+  const fc  = forecastRec(s);
   const rec = document.getElementById('recommendation');
   rec.className = 'recommendation';
 
-  if (spotBelow && rising) {
-    rec.classList.add('rec-buy');
-    document.getElementById('rec-icon').textContent = '✅';
-    document.getElementById('rec-title').textContent = 'Buy now — prices are rising fast';
-    document.getElementById('rec-body').textContent  = `Yesterday's price (₹${s.spotINR}/kg) is ₹${(s.monthlyAvgINR-s.spotINR).toFixed(1)}/kg below the monthly average AND the 30-day trend is strongly upward (+${s.trendPct}%). Delaying risks the average catching up. Buying now saves approximately ${lakh(savings)} on a ${qty}-tonne order.`;
-  } else if (spotBelow) {
-    rec.classList.add('rec-buy');
-    document.getElementById('rec-icon').textContent = '✅';
-    document.getElementById('rec-title').textContent = "Buy now — yesterday's price is below the monthly average";
-    document.getElementById('rec-body').textContent  = `Yesterday's price (₹${s.spotINR}/kg) is cheaper than the billing-window average of ₹${s.monthlyAvgINR}/kg. Buying now saves approximately ${lakh(savings)} on a ${qty}-tonne order. Breakeven: price can rise up to ${breakevenPct}% before the monthly average becomes the better deal.`;
-  } else if (!spotBelow && falling) {
-    rec.classList.add('rec-wait');
-    document.getElementById('rec-icon').textContent = '⏳';
-    document.getElementById('rec-title').textContent = 'Wait — prices are trending down';
-    document.getElementById('rec-body').textContent  = `Yesterday's price (₹${s.spotINR}/kg) is above the monthly average (₹${s.monthlyAvgINR}/kg) and the trend is downward (${s.trendPct}%). Waiting may bring the average down. Consider monitoring for 5–7 days before committing.`;
-  } else if (!spotBelow && highVol) {
-    rec.classList.add('rec-split');
-    document.getElementById('rec-icon').textContent = '⚖️';
-    document.getElementById('rec-title').textContent = 'Split your purchase — high volatility';
-    document.getElementById('rec-body').textContent  = `Yesterday's price (₹${s.spotINR}/kg) is above the monthly average (₹${s.monthlyAvgINR}/kg) with high market volatility (${s.volMonthlyPct}%). Consider buying half now and the rest in 10–12 days to reduce your risk.`;
+  if (fc.simBased) {
+    const winner     = fc.monthlyFavoured ? 'monthly avg' : "yesterday's price";
+    const winnerPct  = fc.monthlyFavoured ? fc.pctMonthly : fc.pctBuyNow;
+    const loserPct   = 100 - winnerPct;
+    const filled     = Math.round(winnerPct / 10);
+    const bar        = '█'.repeat(filled) + '░'.repeat(10-filled);
+    const savingAmt  = fc.monthlyFavoured ? lakh(-savings) : lakh(savings);
+
+    rec.classList.add(fc.monthlyFavoured ? 'rec-wait' : 'rec-buy');
+    document.getElementById('rec-icon').textContent = fc.monthlyFavoured ? '⏳' : '✅';
+    document.getElementById('rec-title').textContent = `${fc.confidence} signal: ${fc.monthlyFavoured ? 'Buy at monthly avg' : "Buy at yesterday's price"}`;
+    document.getElementById('rec-body').innerHTML =
+      `With <strong>${fc.daysLeft} days</strong> left in the billing period, the current ${s.curWindowSize}-day avg (₹${s.curAvgINR}/kg) will shift as more days are added. Simulating the remaining days from today's price of ₹${s.spotINR}/kg:<br><br>` +
+      `<span style="font-family:'DM Mono',monospace;font-size:12px;">[${bar}] ${winnerPct}% of paths → ${winner} ends up cheaper</span><br>` +
+      `<span style="font-family:'DM Mono',monospace;font-size:12px;">[${('░'.repeat(10-filled)+'█'.repeat(filled))}] ${loserPct}% of paths → ${fc.monthlyFavoured ? "yesterday's price" : 'monthly avg'} ends up cheaper</span><br><br>` +
+      `${fc.confidence === 'Close call' ? '⚠️ Close call — the two options are nearly equal.' : `Projected saving on a ${qty}-tonne order if recommendation holds: <strong>${savingAmt}</strong>.`} Breakeven: ₹${Math.abs(s.activeAvgINR-s.spotINR).toFixed(1)}/kg (${Math.abs(breakevenPct)}%) price move flips the call.`;
   } else {
-    rec.classList.add('rec-wait');
-    document.getElementById('rec-icon').textContent = '⏳';
-    document.getElementById('rec-title').textContent = 'Monthly average may be cheaper';
-    document.getElementById('rec-body').textContent  = `Yesterday's price (₹${s.spotINR}/kg) is ₹${(s.spotINR-s.monthlyAvgINR).toFixed(1)}/kg above the current monthly average (₹${s.monthlyAvgINR}/kg). The monthly average pricing option would save approximately ${lakh(-savings)} on this ${qty}-tonne order. No strong upward trend visible — the wait appears low-risk.`;
+    // Previous period is complete — no simulation needed, simple comparison
+    const spotBelow = s.spotINR < s.activeAvgINR;
+    rec.classList.add(spotBelow ? 'rec-buy' : 'rec-wait');
+    document.getElementById('rec-icon').textContent = spotBelow ? '✅' : '⏳';
+    document.getElementById('rec-title').textContent = spotBelow ? "Buy now — yesterday's price is cheaper" : 'Buy at monthly avg — it is cheaper';
+    document.getElementById('rec-body').textContent  = spotBelow
+      ? `Yesterday's price (₹${s.spotINR}/kg) is ₹${(s.activeAvgINR-s.spotINR).toFixed(1)}/kg below the monthly avg (₹${s.activeAvgINR}/kg). Buying now saves approximately ${lakh(savings)} on a ${qty}-tonne order.`
+      : `Yesterday's price (₹${s.spotINR}/kg) is ₹${(s.spotINR-s.activeAvgINR).toFixed(1)}/kg above the monthly avg (₹${s.activeAvgINR}/kg). Choosing the monthly avg saves approximately ${lakh(-savings)} on this ${qty}-tonne order.`;
   }
 
   // ── Scenario table ──
