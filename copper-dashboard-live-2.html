@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copper Buy Decision Tool — Kamp Stamping</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --steel-darkest: #0f1923;
+    --steel-dark:    #1c2b3a;
+    --steel-mid:     #2e4057;
+    --steel-accent:  #4a7fa5;
+    --steel-light:   #7baec8;
+    --green: #14532d; --green-bg: #dcfce7;
+    --amber: #78350f; --amber-bg: #fef3c7;
+    --red: #7f1d1d;   --red-bg: #fee2e2;
+    --blue: #1e3a5f;  --blue-bg: #dbeafe;
+    --bg: #eef1f5;
+    --surface: #f8fafc;
+    --surface2: #dde3eb;
+    --border: #b8c4cf;
+    --text: #0f1923;
+    --text2: #3d5166;
+    --text3: #7a93a8;
+    --radius: 12px;
+    --shadow: 0 1px 4px rgba(15,25,35,0.12);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.6; }
+
+  header { background: linear-gradient(135deg, #2e4057 0%, #3d5570 60%, #4a7fa5 100%); color: white; border-bottom: 2px solid #7baec8; padding: 0 2rem; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+  .logo-icon { width: 30px; height: 30px; background: rgba(74,127,165,0.35); border-radius: 8px; border: 1px solid rgba(74,127,165,0.5); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .live-dot { width: 7px; height: 7px; background: #4a7fa5; border-radius: 50%; animation: pulse 2s infinite; box-shadow: 0 0 6px #4a7fa5; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .live-label { font-size: 12px; opacity: 0.7; font-family: 'DM Mono', monospace; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .page-title { margin-bottom: 1.5rem; }
+  .page-title h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 3px; }
+  .page-title p { font-size: 13px; color: var(--text2); }
+
+  /* Loading state */
+  .loading-screen { text-align: center; padding: 4rem 2rem; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--copper); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--text2); }
+
+  /* Error state */
+  .error-banner { background: var(--red-bg); border: 1px solid #fca5a5; border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1rem; font-size: 13px; color: var(--red); }
+
+  /* Data freshness */
+  .data-banner { background: #e4ecf2; border: 1px solid #b0c4d4; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--steel-mid); display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--steel-accent); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--steel-accent); margin-bottom: 1rem; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1rem; align-items: start; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+  .metric-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .metric-value { font-size: 20px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; line-height: 1.1; font-family: 'DM Mono', monospace; }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .metric.highlight { background: linear-gradient(135deg, #1c2b3a, #2e4057); border-color: #4a7fa5; border-width: 1.5px; }
+  .metric.highlight .metric-label, .metric.highlight .metric-sub { color: rgba(255,255,255,0.6); }
+  .metric.highlight .metric-value { color: white; }
+
+  .recommendation { border-radius: var(--radius); padding: 1.25rem 1.5rem; border-left: 4px solid; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 14px; }
+  .rec-icon { font-size: 24px; margin-top: 1px; flex-shrink: 0; }
+  .rec-title { font-size: 16px; font-weight: 600; margin-bottom: 5px; letter-spacing: -0.01em; }
+  .rec-body { font-size: 13px; line-height: 1.7; opacity: 0.85; }
+  .rec-buy { background: var(--green-bg); border-color: #16a34a; }
+  .rec-buy .rec-title { color: var(--green); }
+  .rec-wait { background: #e4ecf2; border-color: #4a7fa5; }
+  .rec-wait .rec-title { color: #1c2b3a; }
+  .rec-split { background: var(--blue-bg); border-color: #3b82f6; }
+  .rec-split .rec-title { color: var(--blue); }
+
+
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .tab { font-size: 12px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .tab:hover { background: var(--surface2); }
+  .tab.active { background: var(--steel-mid); color: white; border-color: var(--steel-accent); }
+
+  .chart-wrap { position: relative; width: 100%; height: 230px; }
+  .chart-note { font-size: 11px; color: var(--text3); margin-top: 8px; }
+
+  .slider-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .slider-row label { font-size: 13px; color: var(--text2); min-width: 200px; }
+  .slider-row input[type=range] { flex: 1; min-width: 120px; accent-color: #4a7fa5; cursor: pointer; }
+  .slider-val { font-size: 14px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--steel-mid); min-width: 50px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; font-family: 'DM Mono', monospace; }
+  .b-green { background: var(--green-bg); color: var(--green); }
+  .b-red { background: var(--red-bg); color: var(--red); }
+  .b-blue { background: var(--blue-bg); color: var(--blue); }
+
+
+
+  footer { text-align: center; padding: 1.5rem; font-size: 11px; color: var(--text3); border-top: 2px solid var(--border); margin-top: 2rem; background: #e4ecf2; }
+  .info-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--steel-accent); color: white; font-size: 9px; font-weight: 700; cursor: pointer; margin-left: 5px; vertical-align: middle; position: relative; font-style: normal; flex-shrink: 0; }
+  .info-icon .tooltip { visibility: hidden; opacity: 0; position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); background: #1c2b3a; color: white; font-size: 11px; font-weight: 400; line-height: 1.5; padding: 8px 12px; border-radius: 8px; width: 230px; text-align: left; pointer-events: none; transition: opacity 0.2s; z-index: 100; font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .info-icon .tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1c2b3a; }
+  .info-icon:hover .tooltip { visibility: visible; opacity: 1; }
+  @media (max-width: 600px) { header { padding: 0 1rem; } main { padding: 1.25rem 1rem 3rem; } .metric-value { font-size: 17px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚙</div>
+    Kamp Stamping — Copper Tool
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="live-dot"></div>
+    <span class="live-label" id="live-label">LOADING…</span>
+    <span style="font-size:11px;opacity:0.5;font-family:'DM Mono',monospace;">|</span>
+    <span style="font-size:11px;opacity:0.65;font-family:'DM Mono',monospace;" id="fetch-time">—</span>
+  </div>
+</header>
+
+<main>
+  <div class="page-title">
+    <h1>Copper Purchase Decision Dashboard</h1>
+    <p>Should you buy at yesterday's price or wait for the monthly average?</p>
+  </div>
+
+  <!-- Loading screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Fetching live copper prices and exchange rates…</div>
+  </div>
+
+  <!-- Main content (hidden until data loads) -->
+  <div id="main-content" style="display:none;">
+
+
+
+    <div class="metrics-grid" id="metrics-grid"></div>
+
+    <div class="card">
+      <div class="card-title">Adjust your order quantity</div>
+      <div class="slider-row">
+        <label>Purchase quantity (tonnes)</label>
+        <input type="range" id="qty" min="1" max="5" step="0.5" value="2.5">
+        <span class="slider-val" id="qty-val">2.5 T</span>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;" id="cost-summary"></div>
+    </div>
+
+    <div id="recommendation" class="recommendation rec-buy">
+      <div class="rec-icon" id="rec-icon">✅</div>
+      <div class="rec-content">
+        <div class="rec-title" id="rec-title">—</div>
+        <div class="rec-body" id="rec-body"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Price analysis</div>
+      <div class="tabs">
+        <button class="tab active" onclick="setView('history',this)">Actual 30-day prices</button>
+        <button class="tab" onclick="setView('sim',this)">Simulated paths (next 30d)</button>
+        <button class="tab" onclick="setView('dist',this)">Probability distribution</button>
+      </div>
+      <div id="sim-legend" style="display:none;gap:20px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+          <span style="display:inline-block;width:28px;height:3px;background:#0891b2;border-radius:2px;opacity:0.7;"></span>
+          Possible price path (12 simulations)
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+          <span style="display:inline-block;width:28px;height:0;border-top:2px dashed #ef4444;"></span>
+          Monthly average
+        </span>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="Copper price chart">Copper price data</canvas></div>
+      <div class="chart-note" id="chart-note">Source: COMEX via Google Finance. Prices in ₹/kg.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Scenario analysis — what if prices move?</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Scenario</th><th>End price (₹/kg)</th><th>Best action</th><th>Order cost</th><th>vs monthly avg</th></tr></thead>
+          <tbody id="scenario-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+ html>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   CONFIGURATION — paste your Google Sheet CSV URL below
+   (File → Share → Publish to web → Sheet1 → CSV → copy URL)
+   ══════════════════════════════════════════════════════ */
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRgfINM7qjnO-VSofh2AYW6fQuooekOLskenQ3sQyQRP0c8xvUbd1s1Bad3su4TQf10BNqNALlfq_Z1/pub?gid=0&single=true&output=csv';
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4fs4wgGs5rA_HWjqklQGAWM7xJae5rEoo6cKE4M-gY4jJVfynvOyz7uTOpTQmXrfguw/exec';
+
+/* ══════════════════════════════════════════════════════
+   END CONFIGURATION — no need to edit below this line
+   ══════════════════════════════════════════════════════ */
+
+
+
+let STATE = {};
+let chartInst = null;
+let currentView = 'history';
+
+// ── Fetch & parse ──────────────────────────────────────
+async function fetchSheetData() {
+  const res = await fetch(APPS_SCRIPT_URL);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  return parseJSON(json);
+}
+
+function parseJSON(rows) {
+  // Actual sheet structure from Apps Script:
+  // Row 0: ["Label","Value","","Date","Close"]
+  // Row 1: ["USD_INR", 94.12, "", "2026-03-16...", 35.69]
+  // Row 2: ["CPER ETF price (USD)", 37.6, "", date, close]
+  // Row 3: ["Copper USD/lb", 6.016, ...]
+  // Row 4: ["Copper USD/tonne", 13262, ...]
+  // Row 5: ["Copper ₹/kg", 1248.3, ...]
+  // Row 6: ["Last_Updated", ...]
+  // Col 3,4 = Date, Close (CPER history) from row 1 onwards
+
+  const kv = {};
+  for (let i = 0; i < rows.length; i++) {
+    const key = String(rows[i][0] || '').trim();
+    const val = parseFloat(rows[i][1]);
+    if (key && !isNaN(val)) kv[key] = val;
+  }
+
+  // Match exact label names from the sheet
+  const usdInr   = kv['USD_INR']               || parseFloat(rows[1]?.[1]) || 93.5;
+  const inrPerKg = kv['Copper ₹/kg']       || parseFloat(rows[5]?.[1]) || null;
+  const usdPerLb = kv['Copper USD/lb']          || parseFloat(rows[3]?.[1]) || null;
+
+  // History: col 3=Date, col 4=CPER close — skip header row 0, start from row 1
+  const history = [];
+  for (let i = 1; i < rows.length; i++) {
+    const rawDate   = rows[i][3];
+    const cperPrice = parseFloat(rows[i][4]);
+    if (rawDate && !isNaN(cperPrice) && cperPrice > 5) {
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) continue;
+      // CPER → INR/kg: ÷6.25 → USD/lb, ×2204.62 → USD/t, ×usdInr ÷1000 → INR/kg
+      const inrKg = +((cperPrice / 6.25) * 2204.62 * usdInr / 1000).toFixed(1);
+      history.push({ rawDate: d, date: formatDate(d), inrKg });
+    }
+  }
+  history.sort((a, b) => a.rawDate - b.rawDate);
+
+  console.log('Parsed:', { usdInr, inrPerKg, usdPerLb, historyCount: history.length });
+  return { usdInr, inrPerKg, usdPerLb, _history: history };
+}
+
+function formatDate(input) {
+  try {
+    const d = (input instanceof Date) ? input : new Date(input);
+    return isNaN(d.getTime()) ? String(input) : d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+  } catch { return String(input); }
+}
+
+// ── Derived calculations ───────────────────────────────
+function deriveState(raw) {
+  const usdInr = raw.usdInr || 93.5;
+
+  // History already converted to INR/kg in parseJSON, sorted chronologically
+  const allHist    = (raw._history || []);
+  const histINR    = allHist.map(h => h.inrKg);
+  const histLabels = allHist.map(h => h.date);
+
+  // Yesterday's close = last entry in history (most recent settled trading day)
+  const spotINR = histINR.length > 0
+    ? histINR[histINR.length - 1]
+    : raw.inrPerKg
+      ? +raw.inrPerKg.toFixed(1)
+      : 1247;
+  const spotDate = histLabels.length > 0 ? histLabels[histLabels.length - 1] : 'yesterday';
+
+  // Monthly avg window: 21st of previous month to 20th of current month
+  const today = new Date();
+  const windowStart = new Date(today.getFullYear(), today.getMonth() - 1, 21); // 21st last month
+  const windowEnd   = new Date(today.getFullYear(), today.getMonth(), 20);     // 20th this month
+  const hist = allHist.filter(h => h.rawDate >= windowStart && h.rawDate <= windowEnd);
+  const avgWindowSize = hist.length;
+
+  // Monthly average = average of history (approximating 21st prev month to 20th this month)
+  const avgPrices = hist.map(h => h.inrKg);
+  const monthlyAvgINR = avgPrices.length > 0
+    ? +(avgPrices.reduce((s,v)=>s+v,0)/avgPrices.length).toFixed(1)
+    : spotINR;
+
+  // Trend & volatility use full history, not just the avg window
+  const oldest = histINR[0] || spotINR;
+  const newest = histINR[histINR.length-1] || spotINR;
+  const trendPct = +((newest - oldest) / oldest * 100).toFixed(1);
+  const trendDaily = trendPct / Math.max(histINR.length, 1);
+
+  // Volatility
+  const returns = [];
+  for (let i = 1; i < histINR.length; i++) returns.push((histINR[i]-histINR[i-1])/histINR[i-1]);
+  const meanR = returns.length ? returns.reduce((s,v)=>s+v,0)/returns.length : 0;
+  const volDaily = returns.length
+    ? Math.sqrt(returns.reduce((s,v)=>s+(v-meanR)**2,0)/returns.length)
+    : 0.008;
+  const volMonthlyPct = +(volDaily * Math.sqrt(21) * 100).toFixed(1);
+
+  return { usdInr, spotINR, monthlyAvgINR, avgWindowSize, trendPct, trendDaily, volDaily, volMonthlyPct, histINR, histLabels, windowStart, windowEnd };
+}
+
+// ── Helpers ───────────────────────────────────────────
+function formatWindow(d) {
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+}
+
+// ── Render ─────────────────────────────────────────────
+function render() {
+  const s = STATE;
+  const qty = getQty();
+  document.getElementById('qty-val').textContent = qty + ' T';
+
+  const spotCost = s.spotINR * qty * 1000;
+  const avgCost = s.monthlyAvgINR * qty * 1000;
+  const savings = avgCost - spotCost;
+  const breakevenPct = +((s.monthlyAvgINR - s.spotINR) / s.spotINR * 100).toFixed(1);
+
+  // Metrics
+  document.getElementById('metrics-grid').innerHTML = `
+    <div style="grid-column:1/-1;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--steel-accent);padding-bottom:4px;border-bottom:1px solid var(--border);">Market inputs</div>
+    <div class="metric highlight">
+      <div class="metric-label" style="display:flex;align-items:center;">Yesterday's close<i class="info-icon">i<span class="tooltip">Yesterday's official LME copper closing price, converted to ₹/kg using today's USD/INR rate. Sourced from the CPER copper ETF on NYSE via Google Finance.</span></i></div>
+      <div class="metric-value">₹${s.spotINR}/kg</div>
+      <div class="metric-sub">LME price · ${spotDate}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label" style="display:flex;align-items:flex-start;flex-direction:column;">Monthly avg<i class="info-icon" style="margin-left:0;margin-top:3px;">i<span class="tooltip">Average LME copper price from the 21st of last month to the 20th of this month — the window your supplier uses to calculate the monthly average price option.</span></i><br><i style="text-transform:none;letter-spacing:0;font-weight:400;font-size:10px;color:var(--text3);">21st last month – 20th this month</i></div>
+      <div class="metric-value">₹${s.monthlyAvgINR}/kg</div>
+      <div class="metric-sub">${formatWindow(s.windowStart)} – ${formatWindow(s.windowEnd)} · ${s.avgWindowSize} days</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label" style="display:flex;align-items:center;">30-day trend<i class="info-icon">i<span class="tooltip">How much the copper price has moved over the last 30 days. Red means prices are rising (costs you more). Green means prices are falling (costs you less). Grey means prices are stable.</span></i></div>
+      <div class="metric-value" style="color:${s.trendPct>1?'#991b1b':s.trendPct<-1?'#166534':'#6b7280'}">${s.trendPct>0?'+':''}${s.trendPct}%</div>
+      <div class="metric-sub">${s.trendPct>3?'Rising ↑':s.trendPct<-3?'Falling ↓':'Flat →'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label" style="display:flex;align-items:center;">Volatility<i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving. Low means the price is stable and easier to time. High means the price is swinging sharply — riskier to wait, consider splitting your purchase across two orders.</span></i></div>
+      <div class="metric-value">${s.volMonthlyPct}%</div>
+      <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">USD / INR</div>
+      <div class="metric-value">${s.usdInr.toFixed(1)}</div>
+      <div class="metric-sub">live from Google Finance</div>
+    </div>
+    <div style="grid-column:1/-1;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--steel-accent);padding-bottom:4px;border-bottom:1px solid var(--border);margin-top:8px;">Your order (${qty} tonnes)</div>
+    <div class="metric">
+      <div class="metric-label">Order cost at yesterday's price</div>
+      <div class="metric-value">${lakh(spotCost)}</div>
+      <div class="metric-sub">₹${s.spotINR}/kg × ${qty*1000} kg</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Saving vs monthly avg</div>
+      <div class="metric-value" style="color:${savings>0?'#166534':'#991b1b'}">${savings>=0?'+':'-'}${lakh(Math.abs(savings))}</div>
+      <div class="metric-sub">${savings>0?'yesterday price is cheaper':'monthly avg is cheaper'}</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Breakeven movement</div>
+      <div class="metric-value">${breakevenPct}%</div>
+      <div class="metric-sub">price can rise this much before avg wins</div>
+    </div>
+  `;
+
+  // Recommendation
+  const spotBelow = s.spotINR < s.monthlyAvgINR;
+  const rising = s.trendPct > 5;
+  const falling = s.trendPct < -3;
+  const highVol = s.volMonthlyPct > 8;
+  const rec = document.getElementById('recommendation');
+  const recTitle = document.getElementById('rec-title');
+  const recBody = document.getElementById('rec-body');
+  const recIcon = document.getElementById('rec-icon');
+  rec.className = 'recommendation';
+
+  if (spotBelow && rising) {
+    rec.classList.add('rec-buy'); recIcon.textContent = '✅';
+    recTitle.textContent = 'Buy now — prices are rising fast';
+    recBody.textContent = `Yesterday's price (₹${s.spotINR}/kg) is ₹${(s.monthlyAvgINR-s.spotINR).toFixed(1)}/kg below the monthly average AND the 30-day trend is strongly upward (+${s.trendPct}%). Delaying risks the monthly average catching up or spot climbing further. Buying today saves approximately ${lakh(savings)} on a ${qty}-tonne order.`;
+  } else if (spotBelow) {
+    rec.classList.add('rec-buy'); recIcon.textContent = '✅';
+    recTitle.textContent = 'Buy now — yesterday\'s price is below the monthly average';
+    recBody.textContent = `Yesterday's price (₹${s.spotINR}/kg) is currently cheaper than the billing-window average of ₹${s.monthlyAvgINR}/kg. Buying today saves approximately ${lakh(savings)} on a ${qty}-tonne order. Breakeven: spot can rise up to ${breakevenPct}% before the monthly average option becomes the better deal.`;
+  } else if (!spotBelow && falling) {
+    rec.classList.add('rec-wait'); recIcon.textContent = '⏳';
+    recTitle.textContent = 'Wait — prices are trending down';
+    recBody.textContent = `Yesterday's price (₹${s.spotINR}/kg) is above the monthly average (₹${s.monthlyAvgINR}/kg) and trending downward (${s.trendPct}%). Waiting may bring the average down further. Consider monitoring for 5–7 days. If you must buy now, ask your supplier for the monthly average pricing option.`;
+  } else if (!spotBelow && highVol) {
+    rec.classList.add('rec-split'); recIcon.textContent = '⚖️';
+    recTitle.textContent = 'Split your purchase — high volatility';
+    recBody.textContent = `Yesterday's price (₹${s.spotINR}/kg) is above the monthly average (₹${s.monthlyAvgINR}/kg) with high volatility (${s.volMonthlyPct}%). Consider buying ~${Math.ceil(qty/2*2)/2}T now and the rest in 10–12 days to average your exposure rather than going all-in at either price.`;
+  } else {
+    rec.classList.add('rec-wait'); recIcon.textContent = '⏳';
+    recTitle.textContent = 'Monthly average may be cheaper';
+    recBody.textContent = `Yesterday's price (₹${s.spotINR}/kg) is ₹${(s.spotINR-s.monthlyAvgINR).toFixed(1)}/kg above the current monthly average (₹${s.monthlyAvgINR}/kg). The monthly average pricing option would save approximately ${lakh(-savings)} on this ${qty}-tonne order. No strong upward trend visible — the wait appears low-risk.`;
+  }
+
+  // Signals
+
+
+  document.getElementById('cost-summary').innerHTML = `
+    <div style="font-size:13px;color:var(--text2)">At yesterday's price: <strong style="color:var(--text);font-family:'DM Mono',monospace">${lakh(spotCost)}</strong></div>
+    <div style="font-size:13px;color:var(--text2)">At monthly avg: <strong style="color:var(--text);font-family:'DM Mono',monospace">${lakh(avgCost)}</strong></div>
+    <div style="font-size:13px;color:var(--text2)">Difference: <strong style="color:${savings>0?'#166534':'#991b1b'};font-family:'DM Mono',monospace">${savings>=0?'save ':'pay more '} ${lakh(Math.abs(savings))}</strong></div>
+  `;
+
+  // Scenarios
+  const scenarios = [
+    {name:'Bull run',emoji:'🚀',mult:1.08},{name:'Mild rise',emoji:'📈',mult:1.03},
+    {name:'Flat',emoji:'➡️',mult:1.00},{name:'Mild fall',emoji:'📉',mult:0.97},{name:'Sharp drop',emoji:'⬇️',mult:0.92},
+  ];
+  document.getElementById('scenario-body').innerHTML = scenarios.map(sc => {
+    const ep = +(s.spotINR*sc.mult).toFixed(1);
+    const pathAvg = +((s.spotINR+ep)/2).toFixed(1);
+    const best = ep>s.monthlyAvgINR?'Buy at yesterday\'s price':'Wait for monthly avg';
+    const cost = Math.round(pathAvg*qty*1000);
+    const diff = cost - avgCost;
+    const badge = diff<0?`<span class="badge b-green">Save ${lakh(Math.abs(diff))}</span>`:`<span class="badge b-red">+${lakh(diff)}</span>`;
+    const actionBadge = ep>s.monthlyAvgINR?`<span class="badge b-blue">Yesterday's price</span>`:`<span class="badge b-green">Monthly avg</span>`;
+    return `<tr><td>${sc.emoji} ${sc.name}</td><td style="font-family:'DM Mono',monospace">₹${ep}</td><td>${actionBadge}</td><td style="font-family:'DM Mono',monospace">${lakh(cost)}</td><td>${badge}</td></tr>`;
+  }).join('');
+
+  drawChart();
+}
+
+function lakh(v) { return '₹'+(Math.abs(v)/100000).toFixed(2)+'L'; }
+function getQty() { return +document.getElementById('qty').value; }
+
+function simulatePaths(spot, trendD, volD, days, n) {
+  return Array.from({length:n},()=>{
+    let p=spot, path=[p];
+    for(let d=0;d<days;d++){
+      const shock=(Math.random()+Math.random()+Math.random()-1.5)/1.5;
+      p=+(p*(1+trendD/100+volD*shock)).toFixed(1);
+      path.push(p);
+    }
+    return path;
+  });
+}
+
+function setView(v,btn) {
+  currentView=v;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  drawChart();
+}
+
+function drawChart() {
+  if (chartInst) { chartInst.destroy(); chartInst=null; }
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  const s = STATE;
+  const baseOpts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{autoSkip:true,maxTicksLimit:8,font:{size:11},color:'#a8a29e'},grid:{display:false}},
+      y:{ticks:{font:{size:11},color:'#a8a29e',callback:v=>'₹'+v},grid:{color:'rgba(0,0,0,0.04)'}}
+    }
+  };
+
+  document.getElementById('sim-legend').style.display='none';
+  if (currentView==='history') {
+    document.getElementById('chart-note').textContent = 'Daily closing prices converted to ₹/kg. Red dashed line = current billing window average (21st last month – 20th this month).';
+    chartInst = new Chart(ctx,{type:'line',data:{labels:s.histLabels,datasets:[
+      {label:'Spot',data:s.histINR,borderColor:'#2e4057',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#b45309',tension:0.35},
+      {label:'Avg',data:Array(s.histINR.length).fill(s.monthlyAvgINR),borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,3],pointRadius:0}
+    ]},options:baseOpts});
+  } else if (currentView==='sim') {
+    document.getElementById('chart-note').textContent = 'Each line is one possible price path over the next 30 days, starting from yesterday\'s close. The wider the spread between lines, the higher the uncertainty.';
+    document.getElementById('sim-legend').style.display='flex';
+    const fl=['Today',...Array.from({length:30},(_,i)=>'D'+(i+1))];
+    const paths=simulatePaths(s.spotINR,s.trendDaily,s.volDaily,30,12);
+    const cols=['#b45309','#0891b2','#7c3aed','#16a34a','#dc2626','#d97706','#2563eb','#9333ea','#db2777','#059669','#b45309','#0891b2'];
+    const datasets=paths.map((p,i)=>({label:'P'+(i+1),data:p,borderColor:cols[i]+'70',borderWidth:1.5,pointRadius:0,tension:0.3}));
+    datasets.push({label:'Avg',data:Array(31).fill(s.monthlyAvgINR),borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,3],pointRadius:0});
+    chartInst=new Chart(ctx,{type:'line',data:{labels:fl,datasets},options:baseOpts});
+  } else {
+    document.getElementById('chart-note').textContent = 'Probability distribution of where the price could be at month end, starting from yesterday\'s close. Green = below monthly avg (buy now wins). Red = above monthly avg (wait wins).';
+    const paths=simulatePaths(s.spotINR,s.trendDaily,s.volDaily,30,500);
+    const ends=paths.map(p=>p[p.length-1]);
+    const mn=Math.min(...ends),mx=Math.max(...ends),bins=20,step=(mx-mn)/bins;
+    const counts=Array(bins).fill(0);
+    ends.forEach(e=>{const b=Math.min(Math.floor((e-mn)/step),bins-1);counts[b]++;});
+    const bl=counts.map((_,i)=>Math.round(mn+i*step));
+    chartInst=new Chart(ctx,{type:'bar',data:{labels:bl,datasets:[{label:'Count',data:counts,backgroundColor:bl.map(l=>l<=s.monthlyAvgINR?'#16a34a88':'#dc262688'),borderWidth:0}]},
+      options:{...baseOpts,scales:{...baseOpts.scales,x:{ticks:{font:{size:10},color:'#a8a29e',callback:(_,i)=>'₹'+bl[i]},grid:{display:false}}}}});
+  }
+}
+
+// ── Boot ───────────────────────────────────────────────
+async function init() {
+  try {
+    if (!APPS_SCRIPT_URL) {
+      throw new Error('SETUP NEEDED: Please follow the setup instructions to connect your Google Sheet. Open this HTML file in a text editor, find SHEET_CSV_URL, and paste your Google Sheet CSV URL.');
+    }
+    const raw = await fetchSheetData();
+    STATE = deriveState(raw);
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    document.getElementById('live-label').textContent = 'LIVE · GOOGLE FINANCE';
+    document.getElementById('fetch-time').textContent = new Date().toLocaleTimeString('en-IN');
+    document.getElementById('qty').addEventListener('input', render);
+    render();
+  } catch (err) {
+    document.getElementById('loading-screen').innerHTML = `
+      <div class="error-banner" style="text-align:left;max-width:600px;margin:0 auto;">
+        <strong>⚠️ Could not load live data</strong><br><br>
+        ${err.message}<br><br>
+        <strong>Most likely causes:</strong><br>
+        1. The Google Sheet URL has not been added to this file yet<br>
+        2. The Google Sheet is not published publicly (File → Share → Publish to web)<br>
+        3. Network / CORS issue — try refreshing<br><br>
+        Check the setup instructions document for help.
+      </div>`;
+    document.getElementById('live-label').textContent = 'ERROR';
+  }
+}
+
+init();
+</script>
+
+<footer>
+  Kamp Stamping Internal Tool &nbsp;·&nbsp; Copper prices: CPER ETF via Google Finance · Yesterday's close used for decision &nbsp;·&nbsp; USD/INR: Google Finance real-time &nbsp;·&nbsp; Data refreshes automatically on each page load &nbsp;·&nbsp; Built April 2026
+</footer>
+
+</body>
+</html>
