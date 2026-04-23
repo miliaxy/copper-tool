@@ -155,7 +155,7 @@ footer { text-align:center; padding:1.5rem; font-size:11px; color:var(--text3); 
   <div id="main-content" style="display:none;">
 
     <!-- Row 1: Market inputs -->
-    <div class="metrics-grid" id="metrics-market"></div>
+    <div class="metrics-grid" id="metrics-market" style="grid-template-columns:repeat(3,1fr);"></div>
 
     <!-- Row 2: Your order header -->
     <div class="order-header">
@@ -302,15 +302,28 @@ function deriveState(raw) {
   const histINR    = hist.map(h => h.inrKg);
   const histLabels = hist.map(h => h.label);
 
-  // Monthly avg: 21st of prev month to 20th of this month
-  const today      = new Date();
-  const winStart   = new Date(today.getFullYear(), today.getMonth()-1, 21);
-  const winEnd     = new Date(today.getFullYear(), today.getMonth(),   20);
-  const winHist    = hist.filter(h => h.d >= winStart && h.d <= winEnd);
+  const today = new Date();
+
+  // Previous billing window: 21st of last month to 20th of this month
+  const winStart = new Date(today.getFullYear(), today.getMonth()-1, 21);
+  const winEnd   = new Date(today.getFullYear(), today.getMonth(),   20);
+  const winHist  = hist.filter(h => h.d >= winStart && h.d <= winEnd);
   const monthlyAvgINR = winHist.length > 0
     ? +(winHist.reduce((s,h)=>s+h.inrKg,0)/winHist.length).toFixed(1)
     : spotINR;
   const avgWindowSize = winHist.length;
+
+  // Current billing window: 21st of this month to today (only if today >= 21st)
+  const curStart      = new Date(today.getFullYear(), today.getMonth(), 21);
+  const hasCurPeriod  = today.getDate() >= 21;
+  const curHist       = hasCurPeriod ? hist.filter(h => h.d >= curStart && h.d <= today) : [];
+  const curAvgINR     = curHist.length > 0
+    ? +(curHist.reduce((s,h)=>s+h.inrKg,0)/curHist.length).toFixed(1)
+    : null;
+  const curWindowSize = curHist.length;
+
+  // For order calculations use current period avg if available, else previous
+  const activeAvgINR = curAvgINR !== null ? curAvgINR : monthlyAvgINR;
 
   // Trend
   const oldest  = histINR[0] || spotINR;
@@ -328,7 +341,8 @@ function deriveState(raw) {
   const volMonthlyPct = +(volDaily*Math.sqrt(21)*100).toFixed(1);
 
   return { usdInr, spotINR, spotDate, monthlyAvgINR, avgWindowSize,
-           winStart, winEnd, trendPct, trendDaily, volDaily,
+           winStart, winEnd, curStart, hasCurPeriod, curAvgINR, curWindowSize,
+           activeAvgINR, trendPct, trendDaily, volDaily,
            volMonthlyPct, histINR, histLabels };
 }
 
@@ -339,16 +353,16 @@ function render() {
   document.getElementById('qty-val').textContent = qty+' T';
 
   const spotCost     = s.spotINR * qty * 1000;
-  const avgCost      = s.monthlyAvgINR * qty * 1000;
+  const avgCost      = s.activeAvgINR * qty * 1000;
   const savings      = avgCost - spotCost;
-  const breakevenPct = +((s.monthlyAvgINR - s.spotINR)/s.spotINR*100).toFixed(1);
+  const breakevenPct = +((s.activeAvgINR - s.spotINR)/s.spotINR*100).toFixed(1);
   const fmtWin       = d => d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
 
   // ── Market inputs grid ──
   document.getElementById('metrics-market').innerHTML = `
     <div class="section-label">Market inputs</div>
 
-    <div class="metric highlight">
+    <div class="metric">
       <div class="metric-label">Yesterday's close
         <i class="info-icon">i<span class="tooltip">Yesterday's official LME copper closing price, converted to ₹/kg using today's USD/INR rate. Sourced from the CPER copper ETF on NYSE via Google Finance.</span></i>
       </div>
@@ -357,11 +371,19 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label">Monthly avg
-        <i class="info-icon">i<span class="tooltip">Average LME copper price from the 21st of last month to the 20th of this month — the window your supplier uses to calculate the monthly average price option.</span></i>
+      <div class="metric-label">Current period avg
+        <i class="info-icon">i<span class="tooltip">Average LME copper price from the 21st of this month to today — the running billing window. Used for your order calculations below.</span></i>
       </div>
-      <div class="metric-value">₹${s.monthlyAvgINR}/kg</div>
-      <div class="metric-sub">${fmtWin(s.winStart)} – ${fmtWin(s.winEnd)} · ${s.avgWindowSize} days</div>
+      <div class="metric-value">${s.curAvgINR !== null ? '₹'+s.curAvgINR+'/kg' : '—'}</div>
+      <div class="metric-sub">${s.hasCurPeriod ? fmtWin(s.curStart)+' – today · '+s.curWindowSize+' days' : 'Starts '+fmtWin(s.curStart)}</div>
+    </div>
+
+    <div class="metric">
+      <div class="metric-label">USD / INR
+        <i class="info-icon">i<span class="tooltip">Live USD/INR exchange rate sourced from Google Finance. Used to convert the copper price from USD to ₹/kg.</span></i>
+      </div>
+      <div class="metric-value">${s.usdInr.toFixed(1)}</div>
+      <div class="metric-sub">&nbsp;</div>
     </div>
 
     <div class="metric">
@@ -375,19 +397,19 @@ function render() {
     </div>
 
     <div class="metric">
+      <div class="metric-label">Prev period avg
+        <i class="info-icon">i<span class="tooltip">Average LME copper price from the 21st of last month to the 20th of this month — the completed billing window.</span></i>
+      </div>
+      <div class="metric-value">₹${s.monthlyAvgINR}/kg</div>
+      <div class="metric-sub">${fmtWin(s.winStart)} – ${fmtWin(s.winEnd)} · ${s.avgWindowSize} days</div>
+    </div>
+
+    <div class="metric">
       <div class="metric-label">Volatility
         <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving. Low means the price is stable and easier to time. High means the price is swinging sharply — riskier to wait, consider splitting your purchase across two orders.</span></i>
       </div>
       <div class="metric-value">${s.volMonthlyPct}%</div>
       <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
-    </div>
-
-    <div class="metric">
-      <div class="metric-label">USD / INR
-        <i class="info-icon">i<span class="tooltip">Live USD/INR exchange rate sourced from Google Finance. Used to convert the copper price from USD to ₹/kg.</span></i>
-      </div>
-      <div class="metric-value">${s.usdInr.toFixed(1)}</div>
-      <div class="metric-sub">&nbsp;</div>
     </div>
   `;
 
@@ -406,10 +428,10 @@ function render() {
 
     <div class="metric">
       <div class="metric-label">At monthly avg
-        <i class="info-icon">i<span class="tooltip">What you'd pay using the monthly average price of ₹${s.monthlyAvgINR}/kg × ${qty*1000} kg.</span></i>
+        <i class="info-icon">i<span class="tooltip">What you'd pay using the ${s.hasCurPeriod ? 'current period avg ('+fmtWin(s.curStart)+' – today)' : 'previous period avg ('+fmtWin(s.winStart)+' – '+fmtWin(s.winEnd)+')'} of ₹${s.activeAvgINR}/kg × ${qty*1000} kg.</span></i>
       </div>
       <div class="metric-value">${lakh(avgCost)}</div>
-      <div class="metric-sub">&nbsp;</div>
+      <div class="metric-sub">${s.hasCurPeriod ? 'current period' : 'prev period'}</div>
     </div>
 
     <div class="metric">
