@@ -417,7 +417,7 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label">Current period avg
+      <div class="metric-label">Billing period avg
         <i class="info-icon">i<span class="tooltip">Average LME copper price from the 21st of this month to today — the running billing window. Used for your order calculations below.</span></i>
       </div>
       <div class="metric-value">${s.curAvgINR !== null ? '₹'+s.curAvgINR+'/kg' : '—'}</div>
@@ -497,7 +497,7 @@ function render() {
 
     <div class="metric">
       <div class="metric-label">At monthly avg
-        <i class="info-icon">i<span class="tooltip">What you'd pay using the ${s.hasCurPeriod ? 'current period avg ('+fmtWin(s.curStart)+' – today)' : 'previous period avg ('+fmtWin(s.winStart)+' – '+fmtWin(s.winEnd)+')'} of ₹${s.activeAvgINR}/kg × ${qty*1000} kg.</span></i>
+        <i class="info-icon">i<span class="tooltip">What you'd pay using the ${s.hasCurPeriod ? 'billing period avg ('+fmtWin(s.curStart)+' – today)' : 'prev billing avg ('+fmtWin(s.winStart)+' – '+fmtWin(s.winEnd)+')'} of ₹${s.activeAvgINR}/kg × ${qty*1000} kg.</span></i>
       </div>
       <div class="metric-value">${lakh(avgCost)}</div>
       <div class="metric-sub">${s.hasCurPeriod ? 'current period' : 'prev period'}</div>
