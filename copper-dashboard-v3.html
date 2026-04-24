@@ -218,7 +218,7 @@ footer { text-align:center; padding:1.5rem; font-size:11px; color:var(--text3); 
 </main>
 
 <footer>
-  Kamp Stamping Internal Tool &nbsp;·&nbsp; Copper: CPER ETF via Google Finance · Yesterday's close &nbsp;·&nbsp; USD/INR: Google Finance real-time &nbsp;·&nbsp; Auto-refreshes on page load
+  Kamp Stamping Internal Tool &nbsp;·&nbsp; Copper: LME Cash price via westmetall.com · Yesterday's close &nbsp;·&nbsp; USD/INR: Google Finance real-time &nbsp;·&nbsp; Auto-refreshes on page load
 </footer>
 
 <script>
@@ -265,15 +265,15 @@ function parseRows(rows) {
       ? (usdPerLb * 2204.62 * usdInr / 1000)
       : null;
 
-  // History from cols D(idx 3) & E(idx 4), all rows that have a date and CPER price
+  // History from cols D(idx 3) & E(idx 4) — LME cash price in USD/tonne
   const history = [];
   for (let i = 1; i < rows.length; i++) {
-    const dateVal   = rows[i][3];
-    const cperPrice = parseFloat(rows[i][4]);
-    if (!dateVal || isNaN(cperPrice) || cperPrice < 5) continue;
+    const dateVal  = rows[i][3];
+    const lmePrice = parseFloat(rows[i][4]);
+    if (!dateVal || isNaN(lmePrice) || lmePrice < 100) continue;
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) continue;
-    const inrKg = +((cperPrice / 6.25) * 2204.62 * usdInr / 1000).toFixed(1);
+    const inrKg = +(lmePrice * usdInr / 1000).toFixed(1);
     history.push({ d, label: fmt(d), inrKg });
   }
   history.sort((a,b) => a.d - b.d);
