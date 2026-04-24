@@ -435,8 +435,8 @@ function render() {
           <div class="metric-sub">Not enough data yet</div>
         </div>`;
       const bTrend = +((s.billingINR[bLen-1]-s.billingINR[0])/s.billingINR[0]*100).toFixed(1);
-      const bColor = bTrend > 1 ? '#991b1b' : bTrend < -1 ? '#166534' : '#6b7280';
-      const bLabel = bTrend > 3 ? 'Rising ↑' : bTrend < -3 ? 'Falling ↓' : 'Flat →';
+      const bColor = bTrend > 0 ? '#991b1b' : bTrend < 0 ? '#166534' : '#6b7280';
+      const bLabel = bTrend > 0 ? 'Rising ↑' : bTrend < 0 ? 'Falling ↓' : 'Flat →';
       return `
         <div class="metric">
           <div class="metric-label">Billing period trend
