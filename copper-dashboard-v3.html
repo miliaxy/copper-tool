@@ -255,9 +255,10 @@ function parseRows(rows) {
     if (k && !isNaN(v)) kv[k] = v;
   });
 
-  const usdInr   = kv['USD_INR']          || 93.5;
-  const inrPerKg = kv['Copper \u20b9/kg'] || null; // ₹ symbol
-  const usdPerLb = kv['Copper USD/lb']    || null;
+  const usdInr      = kv['USD_INR']          || 93.5;
+  const inrPerKg    = kv['Copper \u20b9/kg'] || null; // ₹ symbol
+  const usdPerLb    = kv['Copper USD/lb']    || null;
+  const lme3mUSD    = kv['LME_3M_USD']       || null; // 3-month forward in USD/tonne
 
   // Derive INR/kg if not directly available
   const spotINRraw = inrPerKg
@@ -279,7 +280,8 @@ function parseRows(rows) {
   }
   history.sort((a,b) => a.d - b.d);
 
-  return { usdInr, spotINRraw, _history: history };
+  const fwd3mINR = lme3mUSD ? +(lme3mUSD * usdInr / 1000).toFixed(1) : null;
+  return { usdInr, spotINRraw, fwd3mINR, _history: history };
 }
 
 function fmt(d) {
@@ -353,11 +355,14 @@ function deriveState(raw) {
   const billingStart  = hasCurPeriod ? curStart  : winStart;
   const billingEnd    = hasCurPeriod ? today     : winEnd;
 
+  const fwd3mINR = raw.fwd3mINR || null;
+
   return { usdInr, spotINR, spotDate, monthlyAvgINR, avgWindowSize,
            winStart, winEnd, curStart, hasCurPeriod, curAvgINR, curWindowSize,
            activeAvgINR, trendPct, trendDaily, volDaily,
            volMonthlyPct, histINR, histLabels,
-           billingINR, billingLabels, billingAvgINR, billingStart, billingEnd };
+           billingINR, billingLabels, billingAvgINR, billingStart, billingEnd,
+           fwd3mINR };
 }
 
 // ── Simulation-based forecast ─────────────────────────
@@ -455,13 +460,27 @@ function render() {
       <div class="metric-sub">&nbsp;</div>
     </div>
 
-    <div class="metric">
-      <div class="metric-label">Volatility
-        <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving over the last 30 days. Low means the price is stable and easier to time. High means the price is swinging sharply — harder to predict and riskier to wait.</span></i>
-      </div>
-      <div class="metric-value">${s.volMonthlyPct}%</div>
-      <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
-    </div>
+    ${(()=>{
+      if (!s.fwd3mINR) return `
+        <div class="metric">
+          <div class="metric-label">3-Month forward
+            <i class="info-icon">i<span class="tooltip">The LME 3-month forward price — what the market is willing to pay for copper delivered 3 months from now. If lower than spot, the market expects prices to fall (wait signal). If higher, prices are expected to rise (buy sooner).</span></i>
+          </div>
+          <div class="metric-value" style="color:#6b7280">—</div>
+          <div class="metric-sub">Add LME_3M_USD to sheet</div>
+        </div>`;
+      const spread   = +(s.fwd3mINR - s.spotINR).toFixed(1);
+      const fwdColor = spread < 0 ? '#166534' : spread > 0 ? '#991b1b' : '#6b7280';
+      const fwdLabel = spread < 0 ? 'Market bearish ↓' : spread > 0 ? 'Market bullish ↑' : 'Flat';
+      return `
+        <div class="metric">
+          <div class="metric-label">3-Month forward
+            <i class="info-icon">i<span class="tooltip">The LME 3-month forward price — what the market is willing to pay for copper delivered 3 months from now. If lower than spot, the market expects prices to fall (wait signal). If higher, prices are expected to rise (buy sooner).</span></i>
+          </div>
+          <div class="metric-value">₹${s.fwd3mINR}/kg</div>
+          <div class="metric-sub" style="color:${fwdColor}">${fwdLabel} · ${spread>0?'+':''}${spread} vs spot</div>
+        </div>`;
+    })()}
 
     <div class="metric">
       <div class="metric-label">Prev period avg
@@ -479,6 +498,14 @@ function render() {
         ${s.trendPct>0?'+':''}${s.trendPct}%
       </div>
       <div class="metric-sub">${s.trendPct>3?'Rising ↑':s.trendPct<-3?'Falling ↓':'Flat →'}</div>
+    </div>
+
+    <div class="metric">
+      <div class="metric-label">Volatility
+        <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving over the last 30 days. Low means the price is stable and easier to time. High means the price is swinging sharply — harder to predict and riskier to wait.</span></i>
+      </div>
+      <div class="metric-value">${s.volMonthlyPct}%</div>
+      <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
     </div>
   `;
 
