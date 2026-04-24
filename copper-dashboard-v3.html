@@ -424,6 +424,29 @@ function render() {
       <div class="metric-sub">${s.hasCurPeriod ? fmtWin(s.curStart)+' – today · '+s.curWindowSize+' days' : 'Starts '+fmtWin(s.curStart)}</div>
     </div>
 
+    ${(()=>{
+      const bLen = s.billingINR.length;
+      if (bLen < 2) return `
+        <div class="metric">
+          <div class="metric-label">Billing period trend
+            <i class="info-icon">i<span class="tooltip">Price movement from the first day of the billing period to yesterday's close. Red = rising (costs you more to wait). Green = falling (waiting may save money).</span></i>
+          </div>
+          <div class="metric-value" style="color:#6b7280">—</div>
+          <div class="metric-sub">Not enough data yet</div>
+        </div>`;
+      const bTrend = +((s.billingINR[bLen-1]-s.billingINR[0])/s.billingINR[0]*100).toFixed(1);
+      const bColor = bTrend > 1 ? '#991b1b' : bTrend < -1 ? '#166534' : '#6b7280';
+      const bLabel = bTrend > 3 ? 'Rising ↑' : bTrend < -3 ? 'Falling ↓' : 'Flat →';
+      return `
+        <div class="metric">
+          <div class="metric-label">Billing period trend
+            <i class="info-icon">i<span class="tooltip">Price movement from the first day of the billing period to yesterday's close. Red = rising (costs you more to wait). Green = falling (waiting may save money).</span></i>
+          </div>
+          <div class="metric-value" style="color:${bColor}">${bTrend>0?'+':''}${bTrend}%</div>
+          <div class="metric-sub">${bLabel}</div>
+        </div>`;
+    })()}
+
     <div class="metric">
       <div class="metric-label">USD / INR
         <i class="info-icon">i<span class="tooltip">Live USD/INR exchange rate sourced from Google Finance. Used to convert the copper price from USD to ₹/kg.</span></i>
