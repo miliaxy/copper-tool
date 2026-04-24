@@ -456,13 +456,11 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label">30-day trend
-        <i class="info-icon">i<span class="tooltip">How much the copper price has moved over the last 30 days. Red means prices are rising (costs you more). Green means prices are falling (costs you less). Grey means prices are stable.</span></i>
+      <div class="metric-label">Volatility
+        <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving over the last 30 days. Low means the price is stable and easier to time. High means the price is swinging sharply — harder to predict and riskier to wait.</span></i>
       </div>
-      <div class="metric-value" style="color:${s.trendPct>1?'#991b1b':s.trendPct<-1?'#166534':'#6b7280'}">
-        ${s.trendPct>0?'+':''}${s.trendPct}%
-      </div>
-      <div class="metric-sub">${s.trendPct>3?'Rising ↑':s.trendPct<-3?'Falling ↓':'Flat →'}</div>
+      <div class="metric-value">${s.volMonthlyPct}%</div>
+      <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
     </div>
 
     <div class="metric">
@@ -474,11 +472,13 @@ function render() {
     </div>
 
     <div class="metric">
-      <div class="metric-label">Volatility
-        <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving over the last 30 days. Low means the price is stable and easier to time. High means the price is swinging sharply — harder to predict and riskier to wait.</span></i>
+      <div class="metric-label">30-day trend
+        <i class="info-icon">i<span class="tooltip">How much the copper price has moved over the last 30 days. Red means prices are rising (costs you more). Green means prices are falling (costs you less). Grey means prices are stable.</span></i>
       </div>
-      <div class="metric-value">${s.volMonthlyPct}%</div>
-      <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
+      <div class="metric-value" style="color:${s.trendPct>1?'#991b1b':s.trendPct<-1?'#166534':'#6b7280'}">
+        ${s.trendPct>0?'+':''}${s.trendPct}%
+      </div>
+      <div class="metric-sub">${s.trendPct>3?'Rising ↑':s.trendPct<-3?'Falling ↓':'Flat →'}</div>
     </div>
   `;
 
