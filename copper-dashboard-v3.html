@@ -188,8 +188,9 @@ footer { text-align:center; padding:1.5rem; font-size:11px; color:var(--text3); 
     <div class="card">
       <div class="card-title">Price analysis</div>
       <div class="tabs">
-        <button class="tab active" onclick="setView('history',this)">Actual 30-day prices</button>
-        <button class="tab" onclick="setView('sim',this)">Simulated paths (next 30d)</button>
+        <button class="tab active" onclick="setView('billing',this)">Billing period</button>
+        <button class="tab" onclick="setView('history',this)">Last 30 days</button>
+        <button class="tab" onclick="setView('sim',this)">Simulated paths</button>
         <button class="tab" onclick="setView('dist',this)">Probability distribution</button>
       </div>
       <div class="sim-legend" id="sim-legend">
@@ -226,7 +227,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4fs4wgGs5rA_H
 
 let STATE = {};
 let chartInst = null;
-let currentView = 'history';
+let currentView = 'billing';
 
 // ── Fetch ─────────────────────────────────────────────
 async function fetchData() {
@@ -344,10 +345,19 @@ function deriveState(raw) {
     : 0.008;
   const volMonthlyPct = +(volDaily*Math.sqrt(21)*100).toFixed(1);
 
+  // Billing period chart data: current period if today >= 21, else previous window
+  const billingHist   = hasCurPeriod ? curHist : winHist;
+  const billingINR    = billingHist.map(h => h.inrKg);
+  const billingLabels = billingHist.map(h => h.label);
+  const billingAvgINR = hasCurPeriod ? curAvgINR : monthlyAvgINR;
+  const billingStart  = hasCurPeriod ? curStart  : winStart;
+  const billingEnd    = hasCurPeriod ? today     : winEnd;
+
   return { usdInr, spotINR, spotDate, monthlyAvgINR, avgWindowSize,
            winStart, winEnd, curStart, hasCurPeriod, curAvgINR, curWindowSize,
            activeAvgINR, trendPct, trendDaily, volDaily,
-           volMonthlyPct, histINR, histLabels };
+           volMonthlyPct, histINR, histLabels,
+           billingINR, billingLabels, billingAvgINR, billingStart, billingEnd };
 }
 
 // ── Simulation-based forecast ─────────────────────────
@@ -587,8 +597,23 @@ function drawChart() {
     }
   };
 
-  if (currentView==='history') {
-    document.getElementById('chart-note').textContent = 'Daily closing prices converted to ₹/kg. Red dashed = current billing window average (21st last month – 20th this month).';
+  if (currentView==='billing') {
+    const fmtB = d => d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+    const periodLabel = s.hasCurPeriod
+      ? `${fmtB(s.billingStart)} – today (${s.billingINR.length} days)`
+      : `${fmtB(s.billingStart)} – ${fmtB(s.billingEnd)} (${s.billingINR.length} days)`;
+    document.getElementById('chart-note').textContent = `LME cash price (₹/kg) for the active billing period: ${periodLabel}. Red dashed = period average used for your order cost.`;
+    const noData = s.billingINR.length === 0;
+    chartInst = new Chart(ctx,{type:'line',data:{
+      labels: noData ? ['No data yet'] : s.billingLabels,
+      datasets: noData ? [] : [
+        {label:'Price', data:s.billingINR, borderColor:'#2e4057', borderWidth:2.5, pointRadius:4, pointBackgroundColor:'#4a7fa5', tension:0.35, fill:false},
+        {label:'Avg',   data:Array(s.billingINR.length).fill(s.billingAvgINR), borderColor:'#ef4444', borderWidth:1.5, borderDash:[6,3], pointRadius:0}
+      ]
+    },options:baseOpts});
+
+  } else if (currentView==='history') {
+    document.getElementById('chart-note').textContent = 'LME cash price (₹/kg) over the last 30 trading days. Red dashed = billing window average.';
     chartInst = new Chart(ctx,{type:'line',data:{labels:s.histLabels,datasets:[
       {label:'Price',data:s.histINR,borderColor:'#2e4057',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#4a7fa5',tension:0.35,fill:false},
       {label:'Avg',  data:Array(s.histINR.length).fill(s.monthlyAvgINR),borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,3],pointRadius:0}
