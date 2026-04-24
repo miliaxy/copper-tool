@@ -595,17 +595,31 @@ function drawChart() {
     ]},options:baseOpts});
 
   } else if (currentView==='sim') {
-    document.getElementById('chart-note').textContent = "Each line is one possible price path over the next 30 days, starting from yesterday's close. The wider the spread, the higher the uncertainty.";
-    const fl   = ['Today',...Array.from({length:30},(_,i)=>'D'+(i+1))];
-    const paths= simulatePaths(s.spotINR,s.trendDaily,s.volDaily,30,12);
+    const simToday  = new Date();
+    const simEnd    = simToday.getDate() >= 21
+      ? new Date(simToday.getFullYear(), simToday.getMonth()+1, 20)
+      : new Date(simToday.getFullYear(), simToday.getMonth(), 20);
+    const daysLeft  = Math.max(1, Math.round((simEnd - simToday) / 86400000));
+    const simLabels = ['Today'];
+    for (let i = 1; i <= daysLeft; i++) {
+      const d = new Date(simToday); d.setDate(simToday.getDate()+i);
+      simLabels.push(d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}));
+    }
+    document.getElementById('chart-note').textContent = `Each line is one possible price path from today to 20 ${simEnd.toLocaleDateString('en-IN',{month:'short'})} (${daysLeft} days left in billing period). Red dashed = billing window average.`;
+    const paths= simulatePaths(s.spotINR,s.trendDaily,s.volDaily,daysLeft,12);
     const cols = ['#b45309','#0891b2','#7c3aed','#16a34a','#dc2626','#d97706','#2563eb','#9333ea','#db2777','#059669','#0891b2','#7c3aed'];
     const datasets = paths.map((p,i)=>({label:'P'+(i+1),data:p,borderColor:cols[i]+'70',borderWidth:1.5,pointRadius:0,tension:0.3}));
-    datasets.push({label:'Avg',data:Array(31).fill(s.monthlyAvgINR),borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,3],pointRadius:0});
-    chartInst = new Chart(ctx,{type:'line',data:{labels:fl,datasets},options:baseOpts});
+    datasets.push({label:'Avg',data:Array(daysLeft+1).fill(s.monthlyAvgINR),borderColor:'#ef4444',borderWidth:1.5,borderDash:[6,3],pointRadius:0});
+    chartInst = new Chart(ctx,{type:'line',data:{labels:simLabels,datasets},options:baseOpts});
 
   } else {
-    document.getElementById('chart-note').textContent = "Probability distribution of where the price could be at month end, starting from yesterday's close. Green = below monthly avg (buy now wins). Red = above monthly avg (wait wins).";
-    const paths = simulatePaths(s.spotINR,s.trendDaily,s.volDaily,30,500);
+    const distToday = new Date();
+    const distEnd   = distToday.getDate() >= 21
+      ? new Date(distToday.getFullYear(), distToday.getMonth()+1, 20)
+      : new Date(distToday.getFullYear(), distToday.getMonth(), 20);
+    const distDays  = Math.max(1, Math.round((distEnd - distToday) / 86400000));
+    document.getElementById('chart-note').textContent = `Probability distribution of where the price could be on 20 ${distEnd.toLocaleDateString('en-IN',{month:'short'})} (${distDays} days away). Green = below billing avg (wait wins). Red = above billing avg (buy now wins).`;
+    const paths = simulatePaths(s.spotINR,s.trendDaily,s.volDaily,distDays,500);
     const ends  = paths.map(p=>p[p.length-1]);
     const mn=Math.min(...ends),mx=Math.max(...ends),bins=20,step=(mx-mn)/bins;
     const counts=Array(bins).fill(0);
