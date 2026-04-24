@@ -302,8 +302,9 @@ function deriveState(raw) {
       : 1247;
   const spotDate = hist.length > 0 ? hist[hist.length-1].label : '—';
 
-  const histINR    = hist.map(h => h.inrKg);
-  const histLabels = hist.map(h => h.label);
+  const hist30     = hist.slice(-30);
+  const histINR    = hist30.map(h => h.inrKg);
+  const histLabels = hist30.map(h => h.label);
 
   const today = new Date();
 
