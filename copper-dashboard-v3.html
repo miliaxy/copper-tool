@@ -204,7 +204,7 @@ footer { text-align:center; padding:1.5rem; font-size:11px; color:var(--text3); 
     <div class="card">
       <div class="card-title" style="display:flex;align-items:center;">
         Scenario analysis — what if prices move?
-        <i class="info-icon">i<span class="tooltip" style="width:260px;">Each scenario assumes the price moves by a fixed % from yesterday's close by end of month. The order cost shown is the average of yesterday's price and the scenario end price. Green = cheaper than monthly avg. Red = more expensive.</span></i>
+        <i class="info-icon">i<span class="tooltip" style="width:260px;">Each scenario assumes the price moves by a fixed % from yesterday's close by the 20th (end of billing period). The order cost shown is the average of yesterday's price and the scenario end price. Green = cheaper than billing avg. Red = more expensive.</span></i>
       </div>
       <div class="table-wrap">
         <table>
@@ -400,7 +400,7 @@ function render() {
 
     <div class="metric">
       <div class="metric-label">Yesterday's close
-        <i class="info-icon">i<span class="tooltip">Yesterday's official LME copper closing price, converted to ₹/kg using today's USD/INR rate. Sourced from the CPER copper ETF on NYSE via Google Finance.</span></i>
+        <i class="info-icon">i<span class="tooltip">Yesterday's official LME copper cash price, converted to ₹/kg using today's USD/INR rate. Sourced from westmetall.com — the same source your supplier uses for pricing.</span></i>
       </div>
       <div class="metric-value">₹${s.spotINR}/kg</div>
       <div class="metric-sub">LME price · ${s.spotDate}</div>
@@ -442,7 +442,7 @@ function render() {
 
     <div class="metric">
       <div class="metric-label">Volatility
-        <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving. Low means the price is stable and easier to time. High means the price is swinging sharply — riskier to wait, consider splitting your purchase across two orders.</span></i>
+        <i class="info-icon">i<span class="tooltip">How unpredictably the copper price is moving over the last 30 days. Low means the price is stable and easier to time. High means the price is swinging sharply — harder to predict and riskier to wait.</span></i>
       </div>
       <div class="metric-value">${s.volMonthlyPct}%</div>
       <div class="metric-sub">${s.volMonthlyPct>8?'High — be cautious':s.volMonthlyPct>4?'Moderate':'Low'}</div>
