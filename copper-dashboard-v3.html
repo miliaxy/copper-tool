@@ -470,8 +470,8 @@ function render() {
           <div class="metric-sub">Add LME_3M_USD to sheet</div>
         </div>`;
       const spread   = +(s.fwd3mINR - s.spotINR).toFixed(1);
-      const fwdColor = spread < 0 ? '#166534' : spread > 0 ? '#991b1b' : '#6b7280';
-      const fwdLabel = spread < 0 ? 'Market bearish ↓' : spread > 0 ? 'Market bullish ↑' : 'Flat';
+      const fwdColor = spread < 0 ? '#166634' : spread > 0 ? '#991b1b' : '#6b7280';
+      const fwdLabel = spread < 0 ? 'Prices falling — waiting may save' : spread > 0 ? 'Prices rising — buy sooner' : 'Flat — no strong signal';
       return `
         <div class="metric">
           <div class="metric-label">3-Month forward
